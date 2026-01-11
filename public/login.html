@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Login do Projeto</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; }
+        form { background: white; padding: 2rem; border-radius: 8px; width: 300px; text-align: center; }
+        input { width: 100%; margin: 10px 0; padding: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #27ae60; color: white; border: none; cursor: pointer; }
+        #status { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <form id="loginForm">
+        <h2>Acessar Projeto</h2>
+        <input type="email" id="email" placeholder="E-mail" required>
+        <input type="password" id="password" placeholder="Senha" required>
+        <button type="submit">Entrar</button>
+        <div id="status"></div>
+    </form>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const response = await fetch('http://localhost:3000/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const result = await response.json();
+            
+            const statusDiv = document.getElementById('status');
+            if (response.ok) {
+                // Aqui simulamos o redirecionamento baseado no nível
+                statusDiv.style.color = 'green';
+                statusDiv.innerHTML = `Sucesso! <br> Cargo: ${result.role} <br> Setor: ${result.sector}`;
+                
+                // Exemplo de lógica de frontend futura:
+                // if(result.role === 'ADMIN_MASTER') window.location.href = '/dashboard-master.html'
+            } else {
+                statusDiv.style.color = 'red';
+                statusDiv.innerText = result.error;
+            }
+        });
+    </script>
+</body>
+</html>

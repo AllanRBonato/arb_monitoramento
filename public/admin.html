@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Criar Usuário</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; }
+        form { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; }
+        input, select, button { width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        h2 { text-align: center; }
+    </style>
+</head>
+<body>
+    <form id="createForm">
+        <h2>Painel Admin</h2>
+        <input type="text" id="name" placeholder="Nome Completo" required>
+        <input type="email" id="email" placeholder="E-mail" required>
+        <input type="text" id="phone" placeholder="Telefone" required>
+        <input type="password" id="password" placeholder="Senha" required>
+        
+        <label>Tipo de Acesso:</label>
+        <select id="role">
+            <option value="ADMIN_MASTER">Admin Master (Total)</option>
+            <option value="FULL">Full (Setor Admin)</option>
+            <option value="WRITE">Write (Edição)</option>
+            <option value="BEGINNER">Beginner (Leitura)</option>
+        </select>
+
+        <label>Setor:</label>
+        <select id="sector">
+            <option value="SUPORTE_N2">Suporte Nível 2</option>
+            <option value="OEM">OEM</option>
+            <option value="ATENDIMENTO">Atendimento</option>
+        </select>
+
+        <button type="submit">Criar Usuário</button>
+    </form>
+
+    <script>
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value,
+                sector: document.getElementById('sector').value,
+            };
+
+            const response = await fetch('http://localhost:3000/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            alert(result.message || result.error);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+// Arquivo: prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Definição dos tipos de acesso
+enum Role {
+  ADMIN_MASTER
+  FULL
+  WRITE
+  BEGINNER
+}
+
+// Definição dos setores
+enum Sector {
+  SUPORTE_N2
+  OEM
+  ATENDIMENTO
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  phone     String
+  role      Role     @default(BEGINNER)
+  sector    Sector
+  createdAt DateTime @default(now())
+
+  @@map("users")
+}
