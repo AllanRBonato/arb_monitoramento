@@ -1,70 +1,289 @@
-const express = require('express');
 require('dotenv').config();
+const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const prisma = new PrismaClient();
-const app = express();
+const app = express(); // Declarado apenas UMA vez
 
-app.use(express.json());
+const SECRET_KEY = process.env.JWT_SECRET;
+
+// --- CONFIGURAÇÕES DO APP ---
+// Aumenta limite para aceitar fotos grandes (10mb)
+app.use(express.json({ limit: '10mb' })); 
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
+app.use(express.static('public'));
 
-const SECRET_KEY = "sua_chave_super_secreta"; // Em produção, use .env
+// --- SEED (DADOS INICIAIS) ---
+async function seedDatabase() {
+    try {
+        const rolesData = [
+            { name: 'ADMIN_MASTER', level: 100, label: 'Acesso Total' },
+            { name: 'FULL',         level: 50,  label: 'Gestor de Setor' },
+            { name: 'WRITE',        level: 20,  label: 'Operador' },
+            { name: 'BEGINNER',     level: 10,  label: 'Visualizador' }
+        ];
 
-// Rota 1: Criar Usuário (Página de Administração)
-app.post('/api/users', async (req, res) => {
-    const { name, email, password, phone, role, sector } = req.body;
+        for (const r of rolesData) {
+            await prisma.role.upsert({
+                where: { name: r.name },
+                update: {},
+                create: { name: r.name, level: r.level, label: r.label }
+            });
+        }
+
+        const sectors = ['SUPORTE_N2', 'OEM', 'ATENDIMENTO'];
+        for (const s of sectors) {
+            await prisma.sector.upsert({
+                where: { name: s }, update: {}, create: { name: s }
+            });
+        }
+
+        const adminEmail = "admin@arb.com.br";
+        const userExists = await prisma.user.findUnique({ where: { email: adminEmail } });
+
+        if (!userExists) {
+            const roleMaster = await prisma.role.findUnique({ where: { name: 'ADMIN_MASTER' } });
+            const sectorSuporte = await prisma.sector.findUnique({ where: { name: 'SUPORTE_N2' } });
+            const hashedPassword = await bcrypt.hash("123456", 10);
+
+            await prisma.user.create({
+                data: {
+                    name: "Administrador Inicial", email: adminEmail, password: hashedPassword, phone: "00000000",
+                    roleId: roleMaster.id, sectorId: sectorSuporte.id
+                }
+            });
+            console.log("✅ Usuário Admin checado/criado: admin@arb.com.br");
+        }
+    } catch (error) { console.error("Erro no Seed:", error); }
+}
+seedDatabase();
+
+// --- MIDDLEWARE ---
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token ausente' });
+
+    jwt.verify(token, SECRET_KEY, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Token inválido' });
+        req.user = user;
+        next();
+    });
+}
+
+// ================= ROTAS =================
+
+// LOGIN
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const user = await prisma.user.findUnique({ 
+            where: { email }, include: { role: true, sector: true } 
+        });
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ error: "Credenciais inválidas" });
+        }
+
+        const token = jwt.sign(
+            { id: user.id, role: user.role.name, level: user.role.level, sector: user.sector.name }, 
+            SECRET_KEY, { expiresIn: '8h' }
+        );
+
+        res.json({ 
+            message: "OK", token, 
+            role: user.role.name, sector: user.sector.name, avatar: user.avatar 
+        });
+    } catch (e) { res.status(500).json({ error: "Erro servidor" }); }
+});
+
+// LISTAR USUÁRIOS
+app.get('/api/users', authenticateToken, async (req, res) => {
+    try {
+        const { role, sector } = req.user;
+        let whereClause = {};
+
+        if (role === 'ADMIN_MASTER') {
+            whereClause = {}; 
+        } else if (role === 'FULL') {
+            whereClause = { 
+                sector: { name: sector },
+                role: { level: { lt: 100 } } 
+            };
+        } else {
+            return res.status(403).json({ error: "Sem permissão" });
+        }
+
+        const users = await prisma.user.findMany({
+            where: whereClause,
+            select: { 
+                id: true, name: true, email: true, 
+                role: { select: { name: true, label: true } }, 
+                sector: { select: { name: true } } 
+            },
+            orderBy: { role: { level: 'desc' } }
+        });
+        
+        const formatted = users.map(u => ({
+            ...u, role: u.role.name, roleLabel: u.role.label, sector: u.sector.name
+        }));
+        res.json(formatted);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// OBTER UM USUÁRIO (PARA EDIÇÃO)
+app.get('/api/users/:id', authenticateToken, async (req, res) => {
+    const user = await prisma.user.findUnique({
+        where: { id: req.params.id },
+        include: { role: true, sector: true }
+    });
+    if(user) user.password = undefined; 
+    res.json(user);
+});
+
+// CRIAR USUÁRIO
+app.post('/api/users', authenticateToken, async (req, res) => {
+    const { name, email, password, phone, roleName, sectorName } = req.body;
+    try {
+        const role = await prisma.role.findUnique({ where: { name: roleName } });
+        const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
+        
+        if (!role || !sector) return res.status(400).json({ error: "Dados inválidos" });
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await prisma.user.create({
+            data: { name, email, password: hashedPassword, phone, roleId: role.id, sectorId: sector.id }
+        });
+        res.status(201).json({ message: "Criado" });
+    } catch (e) { res.status(500).json({ error: "Erro ao criar" }); }
+});
+
+// ATUALIZAR USUÁRIO (PUT)
+app.put('/api/users/:id', authenticateToken, async (req, res) => {
+    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão" });
+
+    const { id } = req.params;
+    const { name, email, phone, roleName, sectorName, password } = req.body;
 
     try {
-        // Verifica se usuário já existe
-        const userExists = await prisma.user.findUnique({ where: { email } });
-        if (userExists) return res.status(400).json({ error: "E-mail já cadastrado" });
+        const updateData = { name, email, phone };
+        
+        if (password && password.trim() !== "") {
+            updateData.password = await bcrypt.hash(password, 10);
+        }
 
-        // Criptografa a senha
-        const hashedPassword = await bcrypt.hash(password, 10);
+        if (roleName) {
+            const role = await prisma.role.findUnique({ where: { name: roleName } });
+            if (role) updateData.roleId = role.id;
+        }
+        if (sectorName) {
+            const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
+            if (sector) updateData.sectorId = sector.id;
+        }
 
-        const newUser = await prisma.user.create({
-            data: {
-                name,
-                email,
-                password: hashedPassword,
-                phone,
-                role,   // Deve ser um dos valores do ENUM (ex: ADMIN_MASTER)
-                sector  // Deve ser um dos valores do ENUM (ex: OEM)
-            }
-        });
+        await prisma.user.update({ where: { id }, data: updateData });
+        res.json({ message: "Atualizado!" });
+    } catch (error) { res.status(500).json({ error: "Erro ao atualizar." }); }
+});
 
-        res.status(201).json({ message: "Usuário criado com sucesso!", user: newUser });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Erro ao criar usuário" });
+// 6. EXCLUIR USUÁRIO (DELETE)
+app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+    // Segurança: Só quem é Gerente (50) ou Master (100) pode apagar
+    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão para excluir." });
+
+    try {
+        await prisma.user.delete({ where: { id: req.params.id } });
+        res.json({ message: "Usuário excluído com sucesso!" });
+    } catch (e) {
+        res.status(500).json({ error: "Erro ao excluir (Talvez o usuário não exista)." });
     }
 });
 
-// Rota 2: Login (Testar Acessos)
-app.post('/api/login', async (req, res) => {
-    const { email, password } = req.body;
-
+// SALVAR AVATAR
+app.post('/api/user/avatar', authenticateToken, async (req, res) => {
+    const { avatarBase64 } = req.body;
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+        await prisma.user.update({
+            where: { id: req.user.id },
+            data: { avatar: avatarBase64 }
+        });
+        res.json({ message: "Foto salva!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao salvar foto" }); }
+});
 
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) return res.status(401).json({ error: "Senha incorreta" });
+// GESTÃO DE CARGOS/SETORES
+app.post('/api/roles', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'ADMIN_MASTER') return res.status(403).json({ error: "Apenas Admin" });
+    const { name, level, label } = req.body;
+    try {
+        const newRole = await prisma.role.create({ data: { name, level: parseInt(level), label } });
+        res.json(newRole);
+    } catch (e) { res.status(400).json({ error: "Erro ao criar cargo" }); }
+});
 
-        // Cria token com as permissões
-        const token = jwt.sign(
-            { id: user.id, role: user.role, sector: user.sector }, 
-            SECRET_KEY, 
-            { expiresIn: '1h' }
-        );
+app.post('/api/sectors', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'ADMIN_MASTER') return res.status(403).json({ error: "Apenas Admin" });
+    try {
+        const newSector = await prisma.sector.create({ data: { name: req.body.name } });
+        res.json(newSector);
+    } catch (e) { res.status(400).json({ error: "Setor já existe" }); }
+});
 
-        res.json({ message: "Login realizado", token, role: user.role, sector: user.sector });
-    } catch (error) {
-        res.status(500).json({ error: "Erro no servidor" });
-    }
+// Dropdowns
+app.get('/api/roles', async (req, res) => res.json(await prisma.role.findMany({ orderBy: { level: 'desc' } })));
+app.get('/api/sectors', async (req, res) => res.json(await prisma.sector.findMany()));
+
+// 1. ATUALIZAR SETOR
+app.put('/api/sectors/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'ADMIN_MASTER') return res.status(403).json({ error: "Apenas Admin" });
+    try {
+        await prisma.sector.update({
+            where: { id: req.params.id },
+            data: { name: req.body.name }
+        });
+        res.json({ message: "Setor atualizado!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar." }); }
+});
+
+// 2. EXCLUIR SETOR
+app.delete('/api/sectors/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'ADMIN_MASTER') return res.status(403).json({ error: "Apenas Admin" });
+    try {
+        // Verifica se tem gente usando antes de apagar
+        const usersInSector = await prisma.user.count({ where: { sectorId: req.params.id } });
+        if (usersInSector > 0) return res.status(400).json({ error: "Não pode apagar: Existem usuários neste setor!" });
+
+        await prisma.sector.delete({ where: { id: req.params.id } });
+        res.json({ message: "Setor excluído!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao excluir." }); }
+});
+
+// 3. ATUALIZAR CARGO
+app.put('/api/roles/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'ADMIN_MASTER') return res.status(403).json({ error: "Apenas Admin" });
+    const { name, level, label } = req.body;
+    try {
+        await prisma.role.update({
+            where: { id: req.params.id },
+            data: { name, level: parseInt(level), label }
+        });
+        res.json({ message: "Cargo atualizado!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar." }); }
+});
+
+// 4. EXCLUIR CARGO
+app.delete('/api/roles/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'ADMIN_MASTER') return res.status(403).json({ error: "Apenas Admin" });
+    try {
+        const usersInRole = await prisma.user.count({ where: { roleId: req.params.id } });
+        if (usersInRole > 0) return res.status(400).json({ error: "Não pode apagar: Existem usuários com este cargo!" });
+
+        await prisma.role.delete({ where: { id: req.params.id } });
+        res.json({ message: "Cargo excluído!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao excluir." }); }
 });
 
 app.listen(3000, () => console.log('Servidor rodando na porta 3000'));

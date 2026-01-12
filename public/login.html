@@ -2,49 +2,73 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Login do Projeto</title>
-    <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #2c3e50; }
-        form { background: white; padding: 2rem; border-radius: 8px; width: 300px; text-align: center; }
-        input { width: 100%; margin: 10px 0; padding: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #27ae60; color: white; border: none; cursor: pointer; }
-        #status { margin-top: 15px; font-weight: bold; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Login - ARB Monitoramento</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <form id="loginForm">
+    <div class="card login-mode">
         <h2>Acessar Projeto</h2>
-        <input type="email" id="email" placeholder="E-mail" required>
-        <input type="password" id="password" placeholder="Senha" required>
-        <button type="submit">Entrar</button>
-        <div id="status"></div>
-    </form>
+
+        <div class="logo-container">
+            <img src="./img/ArBVision.png" alt="Logo" class="logo" onerror="this.style.display='none'">
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">E-mail Corporativo</label>
+                <input type="email" id="email" placeholder="exemplo@arb.com.br" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn-success">Entrar no Sistema</button>
+            
+            <button type="button" class="btn-link" onclick="alert('Função em desenvolvimento!')">
+                Esqueci minha senha
+            </button>
+
+            <div id="status" style="margin-top:15px; font-weight:bold;"></div>
+        </form>
+    </div>
 
     <script>
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-
-            const response = await fetch('http://localhost:3000/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-
-            const result = await response.json();
-            
             const statusDiv = document.getElementById('status');
-            if (response.ok) {
-                // Aqui simulamos o redirecionamento baseado no nível
-                statusDiv.style.color = 'green';
-                statusDiv.innerHTML = `Sucesso! <br> Cargo: ${result.role} <br> Setor: ${result.sector}`;
+
+            statusDiv.innerText = "Verificando...";
+            statusDiv.style.color = "#7f8c8d";
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
                 
-                // Exemplo de lógica de frontend futura:
-                // if(result.role === 'ADMIN_MASTER') window.location.href = '/dashboard-master.html'
-            } else {
+                if (response.ok) {
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('userRole', result.role);
+                    localStorage.setItem('userSector', result.sector);
+                    localStorage.setItem('userAvatar', result.avatar);
+
+                    statusDiv.style.color = 'green';
+                    statusDiv.innerHTML = 'Login realizado!';
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
+                } else {
+                    statusDiv.style.color = '#e74c3c';
+                    statusDiv.innerText = result.error;
+                }
+            } catch (error) {
+                statusDiv.innerText = "Erro de conexão.";
                 statusDiv.style.color = 'red';
-                statusDiv.innerText = result.error;
             }
         });
     </script>

@@ -1,5 +1,3 @@
-// Arquivo: prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,19 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Definição dos tipos de acesso
-enum Role {
-  ADMIN_MASTER
-  FULL
-  WRITE
-  BEGINNER
+// Agora Role é uma tabela, podemos criar novos cargos
+model Role {
+  id          String @id @default(uuid())
+  name        String @unique // Ex: ADMIN_MASTER
+  level       Int    @default(10) // 100=Chefe, 50=Gerente, 10=Peão
+  label       String @default("Leitura") // Ex: "Acesso Total", "Visualizar"
+  users       User[]
+
+  @@map("roles")
 }
 
-// Definição dos setores
-enum Sector {
-  SUPORTE_N2
-  OEM
-  ATENDIMENTO
+// Agora Sector é uma tabela, podemos criar novos setores
+model Sector {
+  id    String @id @default(uuid())
+  name  String @unique
+  users User[]
+  @@map("sectors")
 }
 
 model User {
@@ -30,8 +32,12 @@ model User {
   password  String
   name      String
   phone     String
-  role      Role     @default(BEGINNER)
-  sector    Sector
+  avatar    String?  @db.Text  // <--- CAMPO NOVO (Pode ser nulo)
+  
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+  sectorId  String
+  sector    Sector   @relation(fields: [sectorId], references: [id])
   createdAt DateTime @default(now())
 
   @@map("users")

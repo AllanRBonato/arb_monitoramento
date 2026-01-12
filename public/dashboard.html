@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Projeto</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="card admin-mode" style="margin-top: 20px;">
+        <h2 id="welcomeMsg">Carregando...</h2>
+        
+        <div class="content">
+            <h3>Seus Projetos</h3>
+            <ul id="listaProjetos" style="list-style: none; padding: 0; margin-top: 20px;">
+                </ul>
+        </div>
+    </div>
+
+    <script src="navbar.js"></script> <script>
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+            window.location.href = 'login.html';
+        } else {
+            // Cria a barra
+            criarNavbar('Dashboard'); 
+            carregarDashboard();
+        }
+
+        async function carregarDashboard() {
+            // ... seu código antigo de fetch do dashboard ...
+            // Apenas remova a função de logout daqui, pois agora ela está no navbar.js
+            const response = await fetch('/api/dashboard', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            // ... resto do código igual ...
+        }
+    </script>
+</body>
+</html>
