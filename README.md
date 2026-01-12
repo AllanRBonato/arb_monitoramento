@@ -1,4 +1,18 @@
+🔐 Gerando a chave do JWT
+
+Utilize o comando abaixo para gerar uma chave aleatória e segura para usar na variável JWT_SECRET:
+
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+
+Após gerar a chave, adicione-a ao arquivo .env:
+
+JWT_SECRET=sua_chave_gerada_aqui
+
+----------------------------------------------
+
 🚀 Como iniciar o projeto localmente
+
 📋 Pré-requisitos
 
 Antes de começar, certifique-se de ter instalado em sua máquina:
@@ -22,16 +36,13 @@ cd <NOME_DO_PROJETO>
 
 📦 Inicializando o projeto
 
-Caso o package.json ainda não exista:
+Caso o arquivo package.json ainda não exista:
 
 npm init -y
 
 ----------------------------------------------
 
 📦 Instalando as dependências
-
-Instale as dependências necessárias:
-
 npm install prisma@5.22.0 --save-dev
 npm install @prisma/client@5.22.0
 npm install nodemon --save-dev
@@ -39,9 +50,6 @@ npm install nodemon --save-dev
 ----------------------------------------------
 
 ⚙️ Configurando o Prisma
-
-Inicialize o Prisma no projeto:
-
 npx prisma init
 
 
@@ -60,32 +68,26 @@ DATABASE_URL="postgresql://usuario:senha@localhost:5432/nome_do_banco"
 ----------------------------------------------
 
 🐘 Acessando o PostgreSQL (se necessário)
-
-Para acessar o banco via terminal:
-
 sudo -u postgres psql
 
 
-Caso o banco ainda não exista, crie-o:
+Caso o banco ainda não exista:
 
 CREATE DATABASE nome_do_banco;
 
 ----------------------------------------------
 
 🗄️ Rodando as migrações
-
-Para criar as tabelas no banco de dados, execute:
-
 npx prisma migrate dev --name init
 
 
-⚠️ Este comando deve ser executado sempre que houver alterações no schema.prisma.
+⚠️ Este comando deve ser executado sempre que houver alterações no arquivo schema.prisma.
 
 ----------------------------------------------
 
 ▶️ Configurando os scripts
 
-No arquivo package.json, garanta que os scripts estejam configurados da seguinte forma:
+No arquivo package.json:
 
 "scripts": {
   "start": "node server.js",
@@ -96,16 +98,15 @@ No arquivo package.json, garanta que os scripts estejam configurados da seguinte
 
 ▶️ Iniciando o servidor
 
-Para rodar o projeto em modo desenvolvimento:
+Modo desenvolvimento:
 
 npm run dev
 
 
-Ou em modo produção:
+Modo produção:
 
 npm start
 
-----------------------------------------------
 
 ✅ Pronto!
 
