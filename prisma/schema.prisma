@@ -9,9 +9,9 @@ datasource db {
 
 model Role {
   id          String @id @default(uuid())
-  name        String @unique // Ex: ADMIN_MASTER
-  level       Int    @default(10) // 100=Chefe, 50=Gerente, 10=Peão
-  label       String @default("Leitura") // Ex: "Acesso Total", "Visualizar"
+  name        String @unique 
+  level       Int    @default(10) 
+  label       String @default("Leitura")
   users       User[]
 
   @@map("roles")
@@ -30,13 +30,47 @@ model User {
   password  String
   name      String
   phone     String
-  avatar    String?  @db.Text  // <--- CAMPO NOVO (Pode ser nulo)
+  avatar    String?  @db.Text
   
   roleId    String
   role      Role     @relation(fields: [roleId], references: [id])
   sectorId  String
   sector    Sector   @relation(fields: [sectorId], references: [id])
+  
+  notes     Note[] 
+
+  passwordRequests PasswordRequest[]
+
   createdAt DateTime @default(now())
 
   @@map("users")
+}
+
+// --- ISTO ESTAVA FALTANDO INTEIRO ---
+model Note {
+  id         String   @id @default(uuid())
+  title      String
+  content    String?  @db.Text
+  dueDate    String?
+  importance String   @default("Média")
+  color      String   @default("blue")
+  completed  Boolean  @default(false)
+  
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  @@map("notes")
+}
+
+model PasswordRequest {
+  id        String   @id @default(uuid())
+  status    String   @default("PENDING") // PENDING, DONE
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("password_requests")
 }

@@ -454,3 +454,42 @@ table td:last-child {
         display: none;
     }
 }
+
+/* Botão "Esqueci minha senha" no Login */
+.forgot-btn {
+    background: none;
+    border: none;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin-top: 15px;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: 0.3s;
+    width: auto; /* Não ocupa a largura toda */
+    display: inline-block;
+}
+.forgot-btn:hover { color: var(--primary-color); }
+
+/* --- NOVO: CARD DE ALERTA NO ADMIN --- */
+.alert-card {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: none; /* Escondido se não tiver alertas */
+}
+
+.alert-title { font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+
+.request-item {
+    background: white;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #e2e3e5;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

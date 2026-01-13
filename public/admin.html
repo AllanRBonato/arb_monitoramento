@@ -55,8 +55,8 @@
         /* Botões de Ação */
         .action-btn { cursor: pointer; border: none; background: none; font-size: 1rem; padding: 2px 5px; transition: 0.2s; }
         .action-btn:hover { transform: scale(1.2); }
-        .btn-del { color: #e74c3c; } /* Vermelho */
-        .btn-edit { color: #3498db; } /* Azul */
+        .btn-del { color: #e74c3c; } 
+        .btn-edit { color: #3498db; }
 
         .tag-badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #ccc; background: white; }
     </style>
@@ -66,13 +66,20 @@
 
     <div class="card admin-mode" style="margin-top: 20px;">
 
+        <div id="passwordAlerts" class="alert-card" style="display:none; background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:15px; border-radius:8px; margin-bottom:20px;">
+            <div class="alert-title" style="font-weight:bold; margin-bottom:10px;">
+                ⚠️ Solicitações de Recuperação de Senha
+            </div>
+            <div id="requestsList"></div>
+        </div>
+
         <div id="masterControls" class="admin-controls">
             
             <div class="config-card">
                 <div class="config-title">🏢 Gestão de Setores</div>
                 <div style="display:flex; gap:5px;">
                     <input type="hidden" id="sectorIdEdit">
-                    <input type="text" id="newSectorName" placeholder="Nome (Ex: FINANCEIRO)">
+                    <input type="text" id="newSectorName" placeholder="Ex: FINANCEIRO">
                     <button class="btn-success" style="width:auto; margin:0;" onclick="salvarSetor()" id="btnSaveSector">+</button>
                     <button class="btn-danger" style="width:auto; margin:0; display:none;" onclick="cancelarEdicaoSetor()" id="btnCancelSector">✕</button>
                 </div>
@@ -82,7 +89,7 @@
             <div class="config-card">
                 <div class="config-title">⚖️ Gestão de Cargos</div>
                 <input type="hidden" id="roleIdEdit">
-                <input type="text" id="newRoleName" placeholder="Nome (Ex: SUPERVISOR)" style="margin-bottom:0;">
+                <input type="text" id="newRoleName" placeholder="Ex: SUPERVISOR" style="margin-bottom:0;">
                 <div style="display: flex; gap: 5px;">
                     <select id="newRoleLevel" style="flex:1;">
                         <option value="50">Nível 50 (Gerência)</option>
@@ -143,25 +150,53 @@
                 await atualizarListaSetores();
                 await atualizarListaCargos();
             }
+            await checarPedidosSenha();
             await carregarOpcoesDropdown();
             await carregarUsuarios();
         }
 
-        // --- GESTÃO DE SETORES ---
+        // --- 1. SENHAS ---
+        async function checarPedidosSenha() {
+            if (myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') return;
+            const res = await fetch('/api/admin/password-requests', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const requests = await res.json();
+                const alertBox = document.getElementById('passwordAlerts');
+                const list = document.getElementById('requestsList');
+                list.innerHTML = '';
+                if (requests.length > 0) {
+                    alertBox.style.display = 'block';
+                    requests.forEach(req => {
+                        list.innerHTML += `
+                            <div style="background:white; padding:10px; border-radius:6px; border:1px solid #e2e3e5; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                                <div><strong>${req.user.name}</strong> (${req.user.email})<br><small>Setor: ${req.user.sector.name}</small></div>
+                                <button class="btn-primary" style="width:auto; font-size:0.8rem;" onclick="resolverPedido('${req.id}', '${req.user.id}', '${req.user.name}')">Alterar Senha</button>
+                            </div>`;
+                    });
+                } else { alertBox.style.display = 'none'; }
+            }
+        }
+
+        async function resolverPedido(requestId, userId, userName) {
+            const newPass = prompt(`Digite a nova senha para ${userName}:`);
+            if (!newPass) return;
+            const updateRes = await fetch(`/api/users/${userId}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ password: newPass }) 
+            });
+            if (updateRes.ok) {
+                await fetch(`/api/admin/password-requests/${requestId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                alert(`Senha alterada!`); checarPedidosSenha();
+            } else { alert("Erro."); }
+        }
+
+        // --- 2. SETORES ---
         async function atualizarListaSetores() {
             const res = await fetch('/api/sectors');
             const setores = await res.json();
             const divLista = document.getElementById('listaSetores');
             divLista.innerHTML = '';
             setores.forEach(s => {
-                divLista.innerHTML += `
-                    <div class="list-item">
-                        <span>${s.name}</span>
-                        <div>
-                            <button class="action-btn btn-edit" onclick="prepararEdicaoSetor('${s.id}', '${s.name}')">✏️</button>
-                            <button class="action-btn btn-del" onclick="excluirSetor('${s.id}')">🗑️</button>
-                        </div>
-                    </div>`;
+                divLista.innerHTML += `<div class="list-item"><span>${s.name}</span><div><button class="action-btn btn-edit" onclick="prepararEdicaoSetor('${s.id}', '${s.name}')">✏️</button><button class="action-btn btn-del" onclick="excluirSetor('${s.id}')">🗑️</button></div></div>`;
             });
             carregarOpcoesDropdown();
         }
@@ -173,12 +208,12 @@
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/sectors/${id}` : '/api/sectors';
             const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) });
-            if (res.ok) { alert(id?'Setor Atualizado!':'Setor Criado!'); cancelarEdicaoSetor(); atualizarListaSetores(); }
+            if (res.ok) { alert(id?'Atualizado!':'Criado!'); cancelarEdicaoSetor(); atualizarListaSetores(); }
         }
 
-        function prepararEdicaoSetor(id, nome) {
+        function prepararEdicaoSetor(id, name) {
             document.getElementById('sectorIdEdit').value = id;
-            document.getElementById('newSectorName').value = nome;
+            document.getElementById('newSectorName').value = name;
             document.getElementById('btnSaveSector').innerText = "💾";
             document.getElementById('btnCancelSector').style.display = "inline-block";
         }
@@ -194,24 +229,14 @@
             if(res.ok) atualizarListaSetores(); else alert((await res.json()).error);
         }
 
-        // --- GESTÃO DE CARGOS ---
+        // --- 3. CARGOS ---
         async function atualizarListaCargos() {
             const res = await fetch('/api/roles');
             const cargos = await res.json();
             const divLista = document.getElementById('listaCargos');
             divLista.innerHTML = '';
             cargos.forEach(c => {
-                divLista.innerHTML += `
-                    <div class="list-item">
-                        <div style="display:flex; flex-direction:column;">
-                            <span>${c.name} <small style="color:#999;">(Nv. ${c.level})</small></span>
-                            <span class="tag-badge">${c.label}</span>
-                        </div>
-                        <div>
-                            <button class="action-btn btn-edit" onclick="prepararEdicaoCargo('${c.id}', '${c.name}', '${c.level}', '${c.label}')">✏️</button>
-                            <button class="action-btn btn-del" onclick="excluirCargo('${c.id}')">🗑️</button>
-                        </div>
-                    </div>`;
+                divLista.innerHTML += `<div class="list-item"><div style="display:flex; flex-direction:column;"><span>${c.name} <small style="color:#999;">(Nv. ${c.level})</small></span><span class="tag-badge">${c.label}</span></div><div><button class="action-btn btn-edit" onclick="prepararEdicaoCargo('${c.id}', '${c.name}', '${c.level}', '${c.label}')">✏️</button><button class="action-btn btn-del" onclick="excluirCargo('${c.id}')">🗑️</button></div></div>`;
             });
             carregarOpcoesDropdown();
         }
@@ -225,7 +250,7 @@
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/roles/${id}` : '/api/roles';
             const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name, level, label }) });
-            if (res.ok) { alert(id?'Cargo Atualizado!':'Cargo Criado!'); cancelarEdicaoCargo(); atualizarListaCargos(); }
+            if (res.ok) { alert(id?'Atualizado!':'Criado!'); cancelarEdicaoCargo(); atualizarListaCargos(); }
         }
 
         function prepararEdicaoCargo(id, name, level, label) {
@@ -249,7 +274,7 @@
             if(res.ok) atualizarListaCargos(); else alert((await res.json()).error);
         }
 
-        // --- GESTÃO DE USUÁRIOS ---
+        // --- 4. USUÁRIOS ---
         async function carregarOpcoesDropdown() {
             try {
                 const [rolesRes, sectorsRes] = await Promise.all([fetch('/api/roles'), fetch('/api/sectors')]);
@@ -258,7 +283,7 @@
                 const roleSelect = document.getElementById('role');
                 const sectorSelect = document.getElementById('sector');
                 
-                // Mantém seleção se estiver editando
+                // Salva seleção atual
                 const curRole = roleSelect.value;
                 const curSector = sectorSelect.value;
 
@@ -266,9 +291,9 @@
                 roles.forEach(r => roleSelect.innerHTML += `<option value="${r.name}">${r.name} (${r.label})</option>`);
                 sectorSelect.innerHTML = '<option value="" disabled selected>Selecione o Setor</option>';
                 sectors.forEach(s => sectorSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`);
-
-                if(curRole) roleSelect.value = curRole;
-                if(curSector) sectorSelect.value = curSector;
+                
+                if(curRole && curRole !== "Carregando...") roleSelect.value = curRole;
+                if(curSector && curSector !== "Carregando...") sectorSelect.value = curSector;
             } catch (err) { console.error(err); }
         }
 
@@ -279,8 +304,10 @@
                 document.getElementById('name').value = user.name;
                 document.getElementById('email').value = user.email;
                 document.getElementById('phone').value = user.phone;
-                document.getElementById('role').value = user.role.name;
+                // Como o select espera o NAME (value="${r.name}"), usamos user.role.name
+                document.getElementById('role').value = user.role.name; 
                 document.getElementById('sector').value = user.sector.name;
+                
                 const pass = document.getElementById('password');
                 pass.value = ""; pass.placeholder = "Vazio para manter a senha"; pass.required = false;
 
@@ -293,22 +320,11 @@
             }
         }
 
-        // --- NOVA FUNÇÃO: EXCLUIR USUÁRIO ---
         async function excluirUsuario(id) {
-            if(!confirm("Tem certeza que deseja EXCLUIR este usuário? Essa ação não pode ser desfeita.")) return;
-            
-            const response = await fetch(`/api/users/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.ok) {
-                alert("Usuário Excluído!");
-                carregarUsuarios(); // Atualiza a tabela
-            } else {
-                const res = await response.json();
-                alert(res.error || "Erro ao excluir");
-            }
+            if(!confirm("Tem certeza que deseja EXCLUIR este usuário?")) return;
+            const response = await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            if (response.ok) { alert("Usuário Excluído!"); carregarUsuarios(); } 
+            else { const res = await response.json(); alert(res.error || "Erro ao excluir"); }
         }
 
         document.getElementById('createForm').addEventListener('submit', async (e) => {
@@ -346,13 +362,10 @@
                 const tbody = document.querySelector('#usersTable tbody');
                 tbody.innerHTML = '';
                 if (users.length === 0) return tbody.innerHTML = '<tr><td colspan="5" align="center">Ninguém encontrado.</td></tr>';
-
                 users.forEach(user => {
                     let badgeColor = '#ecf0f1';
                     if (user.role === 'ADMIN_MASTER') badgeColor = '#fadbd8';
                     else if (user.role === 'FULL') badgeColor = '#d4efdf';
-                    
-                    // Adicionei o botão de LIXEIRA aqui embaixo
                     tbody.innerHTML += `<tr>
                         <td>${user.name}</td><td>${user.email}</td>
                         <td><span style="padding:4px 8px; border-radius:4px; background:${badgeColor}; font-weight:bold; font-size:0.8rem;">${user.role}</span> <span class="tag-badge">${user.roleLabel || ''}</span></td>

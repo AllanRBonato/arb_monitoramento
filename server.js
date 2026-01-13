@@ -286,4 +286,117 @@ app.delete('/api/roles/:id', authenticateToken, async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao excluir." }); }
 });
 
+// ================= ROTAS DE NOTAS (PESSOAIS) =================
+
+// 1. LISTAR MINHAS NOTAS
+app.get('/api/notes', authenticateToken, async (req, res) => {
+    try {
+        const notes = await prisma.note.findMany({
+            where: { userId: req.user.id }, // Só pega as notas DO USUÁRIO logado
+            orderBy: { updatedAt: 'desc' }
+        });
+        res.json(notes);
+    } catch (e) { res.status(500).json({ error: "Erro ao buscar notas" }); }
+});
+
+// 2. CRIAR NOTA
+app.post('/api/notes', authenticateToken, async (req, res) => {
+    const { title, content, dueDate, importance, color, completed } = req.body;
+    try {
+        const newNote = await prisma.note.create({
+            data: {
+                title, content, dueDate, importance, color, completed,
+                userId: req.user.id // Vincula ao usuário logado
+            }
+        });
+        res.json(newNote);
+    } catch (e) { res.status(500).json({ error: "Erro ao salvar nota" }); }
+});
+
+// 3. ATUALIZAR NOTA
+app.put('/api/notes/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    // Garante que a nota pertence ao usuário antes de editar
+    const note = await prisma.note.findFirst({ where: { id, userId: req.user.id } });
+    if (!note) return res.status(403).json({ error: "Nota não encontrada ou sem permissão" });
+
+    try {
+        const updated = await prisma.note.update({
+            where: { id },
+            data: req.body // Atualiza os campos enviados
+        });
+        res.json(updated);
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar" }); }
+});
+
+// 4. EXCLUIR NOTA
+app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    const note = await prisma.note.findFirst({ where: { id, userId: req.user.id } });
+    if (!note) return res.status(403).json({ error: "Sem permissão" });
+
+    try {
+        await prisma.note.delete({ where: { id } });
+        res.json({ message: "Nota excluída" });
+    } catch (e) { res.status(500).json({ error: "Erro ao excluir" }); }
+});
+
+// ================= RECUPERAÇÃO DE SENHA =================
+
+// 1. USUÁRIO SOLICITA RESET (PÚBLICO)
+app.post('/api/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) return res.status(404).json({ error: "E-mail não encontrado." });
+
+        // Verifica se já tem pedido pendente
+        const existing = await prisma.passwordRequest.findFirst({
+            where: { userId: user.id, status: 'PENDING' }
+        });
+
+        if (existing) return res.status(400).json({ error: "Já existe uma solicitação pendente para este e-mail." });
+
+        await prisma.passwordRequest.create({ data: { userId: user.id } });
+        
+        res.json({ message: "Solicitação enviada! Avise seu supervisor." });
+    } catch (e) { res.status(500).json({ error: "Erro no servidor" }); }
+});
+
+// 2. ADMIN VÊ SOLICITAÇÕES (FILTRADO POR SETOR)
+app.get('/api/admin/password-requests', authenticateToken, async (req, res) => {
+    // Só Admin ou Full podem ver
+    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão" });
+
+    try {
+        let whereUser = {};
+        
+        // Se for FULL (Gerente), só vê do setor dele
+        if (req.user.role === 'FULL') {
+            whereUser = { sector: { name: req.user.sector } };
+        }
+
+        const requests = await prisma.passwordRequest.findMany({
+            where: { 
+                status: 'PENDING',
+                user: whereUser // Filtra os usuários baseado no cargo de quem tá vendo
+            },
+            include: { 
+                user: { select: { id: true, name: true, email: true, sector: { select: { name: true } } } } 
+            }
+        });
+
+        res.json(requests);
+    } catch (e) { res.status(500).json({ error: "Erro ao buscar solicitações" }); }
+});
+
+// 3. ADMIN RESOLVE (DELETA O PEDIDO APÓS MUDAR A SENHA)
+app.delete('/api/admin/password-requests/:id', authenticateToken, async (req, res) => {
+    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão" });
+    try {
+        await prisma.passwordRequest.delete({ where: { id: req.params.id } });
+        res.json({ message: "Solicitação removida." });
+    } catch (e) { res.status(500).json({ error: "Erro ao limpar solicitação" }); }
+});
+
 app.listen(3000, () => console.log('Servidor rodando na porta 3000'));
