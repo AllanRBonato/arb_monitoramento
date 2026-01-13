@@ -1,18 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - ARB Monitoramento</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
     <div class="card login-mode">
-        
         <h2>Acessar Projeto</h2>
-
+        
         <div class="logo-container">
             <img src="./img/ArBVision.png" alt="Logo" class="logo" onerror="this.style.display='none'">
         </div>
@@ -22,101 +19,53 @@
                 <label for="email">E-mail Corporativo</label>
                 <input type="email" id="email" placeholder="exemplo@arb.com.br" required>
             </div>
-
             <div class="form-group">
                 <label for="password">Senha</label>
                 <input type="password" id="password" placeholder="••••••••" required>
             </div>
-
             <button type="submit" class="btn-success">Entrar no Sistema</button>
-
             <div style="text-align: center;">
-                <button type="button" class="forgot-btn" onclick="solicitarReset()">
-                    Esqueci minha senha
-                </button>
+                <button type="button" class="forgot-btn" onclick="solicitarReset()">Esqueci minha senha</button>
             </div>
-
             <div id="status" style="margin-top:15px; font-weight:bold; text-align: center;"></div>
         </form>
     </div>
 
     <script>
-        // 1. LÓGICA DE LOGIN
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const statusDiv = document.getElementById('status');
-
-            statusDiv.innerText = "Verificando...";
-            statusDiv.style.color = "#7f8c8d";
+            statusDiv.innerText = "Verificando..."; statusDiv.style.color = "#7f8c8d";
 
             try {
                 const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password })
                 });
-
                 const result = await response.json();
-
                 if (response.ok) {
-                    // Salva tudo o que precisa
                     localStorage.setItem('token', result.token);
                     localStorage.setItem('userRole', result.role);
                     localStorage.setItem('userSector', result.sector);
                     localStorage.setItem('userAvatar', result.avatar);
-
-                    statusDiv.style.color = 'green';
-                    statusDiv.innerHTML = 'Login realizado!';
-                    
-                    // Redireciona para o MENU (Bloco de Notas)
-                    setTimeout(() => { window.location.href = 'menu.html'; }, 1000);
-                } else {
-                    statusDiv.style.color = '#e74c3c';
-                    statusDiv.innerText = result.error;
-                }
-            } catch (error) {
-                statusDiv.innerText = "Erro de conexão.";
-                statusDiv.style.color = 'red';
-            }
+                    statusDiv.style.color = 'green'; statusDiv.innerHTML = 'Login realizado!';
+                    setTimeout(() => { window.location.href = 'menu.html'; }, 100);
+                } else { statusDiv.style.color = '#e74c3c'; statusDiv.innerText = result.error; }
+            } catch (error) { statusDiv.innerText = "Erro de conexão."; statusDiv.style.color = 'red'; }
         });
 
-        // 2. FUNÇÃO DE ESQUECI MINHA SENHA (FORA DO LISTENER DO FORM)
         async function solicitarReset() {
             const email = document.getElementById('email').value;
-            
-            // Validação simples
-            if (!email) {
-                alert("Por favor, digite seu E-mail no campo acima e clique aqui novamente.");
-                document.getElementById('email').focus();
-                return;
-            }
-
+            if (!email) { alert("Digite seu e-mail no campo acima primeiro."); document.getElementById('email').focus(); return; }
             const btn = document.querySelector('.forgot-btn');
-            const textoOriginal = btn.innerText;
-            btn.innerText = "Enviando...";
-            btn.disabled = true;
-
+            const textoOriginal = btn.innerText; btn.innerText = "Enviando..."; btn.disabled = true;
             try {
-                const res = await fetch('/api/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
+                const res = await fetch('/api/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
                 const data = await res.json();
-                
-                if (res.ok) {
-                    alert("✅ " + data.message + "\n\nSeu gestor receberá um alerta no painel administrativo.");
-                } else {
-                    alert("❌ " + data.error);
-                }
-            } catch (err) {
-                alert("Erro de conexão com o servidor.");
-            } finally {
-                btn.innerText = textoOriginal;
-                btn.disabled = false;
-            }
+                if (res.ok) alert("✅ " + data.message + "\nSeu gestor receberá um alerta."); else alert("❌ " + data.error);
+            } catch (err) { alert("Erro de conexão."); } 
+            finally { btn.innerText = textoOriginal; btn.disabled = false; }
         }
     </script>
 </body>

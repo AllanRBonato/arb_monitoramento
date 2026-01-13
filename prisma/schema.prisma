@@ -13,7 +13,6 @@ model Role {
   level       Int    @default(10) 
   label       String @default("Leitura")
   users       User[]
-
   @@map("roles")
 }
 
@@ -37,12 +36,10 @@ model User {
   sectorId  String
   sector    Sector   @relation(fields: [sectorId], references: [id])
   
-  notes     Note[] 
-
+  notes            Note[]
   passwordRequests PasswordRequest[]
 
   createdAt DateTime @default(now())
-
   @@map("users")
 }
 
@@ -54,22 +51,18 @@ model Note {
   importance String   @default("Média")
   color      String   @default("blue")
   completed  Boolean  @default(false)
-  
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   updatedAt  DateTime @updatedAt
   createdAt  DateTime @default(now())
-
   @@map("notes")
 }
 
 model PasswordRequest {
   id        String   @id @default(uuid())
-  status    String   @default("PENDING") // PENDING, DONE
+  status    String   @default("PENDING")
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-
   @@map("password_requests")
 }

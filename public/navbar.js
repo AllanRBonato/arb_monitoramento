@@ -1,9 +1,25 @@
+// --- SEGURANÇA: PREVENIR BOTÃO VOLTAR ---
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+        window.location.reload();
+    }
+});
+
 function criarNavbar(nomePagina) {
     const token = localStorage.getItem('token');
+    
+    // --- VERIFICAÇÃO RIGOROSA ---
+    if (!token) {
+        // Se não tem token, a página continua invisível e redireciona
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // SE CHEGOU AQUI, TEM TOKEN. ENTÃO MOSTRA A PÁGINA:
+    document.body.style.display = 'flex'; // <--- A MÁGICA ACONTECE AQUI
+
     const savedAvatar = localStorage.getItem('userAvatar');
     const userRole = localStorage.getItem('userRole');
-    
-    if (!token) return;
 
     const avatarSrc = (savedAvatar && savedAvatar !== "null") 
         ? savedAvatar 
@@ -45,17 +61,14 @@ function criarNavbar(nomePagina) {
 function gerarLinksNavegacao(role, paginaAtual) {
     let links = '';
     
-    // 1. Link para Notas (Sempre aparece, exceto se já estiver lá)
     if (paginaAtual !== 'Minhas Notas') {
         links += `<a href="menu.html" class="dropdown-item">📝 Minhas Notas</a>`;
     }
 
-    // 2. Link para Admin (Só para chefes)
     if ((role === 'ADMIN_MASTER' || role === 'FULL') && paginaAtual !== 'Gestão de Usuários') {
         links += `<a href="admin.html" class="dropdown-item">👥 Gestão de Usuários</a>`;
     }
 
-    // 3. Link para Dashboard (Geral)
     if (paginaAtual !== 'Dashboard') {
         links += `<a href="dashboard.html" class="dropdown-item">📊 Dashboard Geral</a>`;
     }
@@ -64,7 +77,8 @@ function gerarLinksNavegacao(role, paginaAtual) {
 }
 
 function toggleMenu() {
-    document.getElementById('dropdownMenu').classList.toggle('show');
+    const menu = document.getElementById('dropdownMenu');
+    if (menu) menu.classList.toggle('show');
 }
 
 window.onclick = function(event) {
@@ -76,6 +90,7 @@ window.onclick = function(event) {
 
 function logout() {
     localStorage.clear();
+    sessionStorage.clear();
     window.location.href = 'login.html';
 }
 

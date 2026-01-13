@@ -4,6 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const dbVM = require('./db-vm');
 
 const prisma = new PrismaClient();
 const app = express(); 
@@ -42,13 +43,14 @@ async function seedDatabase() {
             });
         }
 
-        const adminEmail = "admin@arb.com.br";
+        // suário padrão caso não tenha nenhum usuário
+        const adminEmail = "innon2026@innon.com.br";
         const userExists = await prisma.user.findUnique({ where: { email: adminEmail } });
 
         if (!userExists) {
             const roleMaster = await prisma.role.findUnique({ where: { name: 'ADMIN_MASTER' } });
             const sectorSuporte = await prisma.sector.findUnique({ where: { name: 'SUPORTE_N2' } });
-            const hashedPassword = await bcrypt.hash("123456", 10);
+            const hashedPassword = await bcrypt.hash("@2026Admin", 10);
 
             await prisma.user.create({
                 data: {
@@ -74,6 +76,7 @@ function authenticateToken(req, res, next) {
         next();
     });
 }
+
 
 // ================= ROTAS =================
 
@@ -144,31 +147,60 @@ app.get('/api/users/:id', authenticateToken, async (req, res) => {
     res.json(user);
 });
 
-// CRIAR USUÁRIO
+// 4. CRIAR USUÁRIO (COM PROTEÇÃO DE HIERARQUIA)
 app.post('/api/users', authenticateToken, async (req, res) => {
     const { name, email, password, phone, roleName, sectorName } = req.body;
+    
+    // REGRA DE SEGURANÇA 1: Quem é FULL ou menor não pode criar usuários
+    // (A menos que você queira que FULL crie usuários operacionais, mas aqui vou bloquear)
+    if (req.user.level < 50) { 
+        return res.status(403).json({ error: "Você não tem permissão para criar usuários." });
+    }
+
     try {
         const role = await prisma.role.findUnique({ where: { name: roleName } });
         const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
         
         if (!role || !sector) return res.status(400).json({ error: "Dados inválidos" });
 
+        // REGRA DE SEGURANÇA 2: Ninguém pode criar um cargo maior ou igual ao seu
+        // Exceção: ADMIN_MASTER pode criar outro ADMIN_MASTER
+        if (role.level >= req.user.level && req.user.role !== 'ADMIN_MASTER') {
+            return res.status(403).json({ error: "Você não pode criar um usuário com este nível de acesso." });
+        }
+
+        // REGRA DE SEGURANÇA 3: FULL só cria no próprio setor
+        if (req.user.role === 'FULL' && sector.name !== req.user.sector) {
+            return res.status(403).json({ error: "Você só pode criar usuários no seu setor." });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
         await prisma.user.create({
             data: { name, email, password: hashedPassword, phone, roleId: role.id, sectorId: sector.id }
         });
         res.status(201).json({ message: "Criado" });
-    } catch (e) { res.status(500).json({ error: "Erro ao criar" }); }
+    } catch (e) { res.status(500).json({ error: "Erro ao criar (Email duplicado?)" }); }
 });
 
-// ATUALIZAR USUÁRIO (PUT)
+// 5. ATUALIZAR USUÁRIO (PUT) (COM A MESMA PROTEÇÃO)
 app.put('/api/users/:id', authenticateToken, async (req, res) => {
+    // Validação básica
     if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão" });
 
     const { id } = req.params;
     const { name, email, phone, roleName, sectorName, password } = req.body;
 
     try {
+        // Se estiver tentando mudar o cargo, verifica a hierarquia
+        if (roleName) {
+            const newRole = await prisma.role.findUnique({ where: { name: roleName } });
+            
+            // Ninguém (exceto Master) pode promover alguém para um cargo maior ou igual ao seu
+            if (newRole && newRole.level >= req.user.level && req.user.role !== 'ADMIN_MASTER') {
+                return res.status(403).json({ error: "Você não pode promover alguém a este nível." });
+            }
+        }
+
         const updateData = { name, email, phone };
         
         if (password && password.trim() !== "") {
@@ -397,6 +429,23 @@ app.delete('/api/admin/password-requests/:id', authenticateToken, async (req, re
         await prisma.passwordRequest.delete({ where: { id: req.params.id } });
         res.json({ message: "Solicitação removida." });
     } catch (e) { res.status(500).json({ error: "Erro ao limpar solicitação" }); }
+});
+
+// Rota para testar conexão com a VM
+app.get('/api/vm/status', authenticateToken, async (req, res) => {
+    try {
+        // Executa um comando SQL direto na VM
+        const result = await dbVM.query('SELECT NOW() as hora_servidor, inet_server_addr() as ip_servidor');
+
+        res.json({
+            status: "Conectado",
+            mensagem: "A VM respondeu!",
+            dados_vm: result.rows[0] // Retorna o IP e a Hora da VM
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Falha ao comunicar com a VM", detalhes: error.message });
+    }
 });
 
 app.listen(3000, () => console.log('Servidor rodando na porta 3000'));
