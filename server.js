@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 
 const prisma = new PrismaClient();
-const app = express(); // Declarado apenas UMA vez
+const app = express(); 
 
 const SECRET_KEY = process.env.JWT_SECRET;
 

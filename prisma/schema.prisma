@@ -46,7 +46,6 @@ model User {
   @@map("users")
 }
 
-// --- ISTO ESTAVA FALTANDO INTEIRO ---
 model Note {
   id         String   @id @default(uuid())
   title      String
