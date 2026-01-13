@@ -1,5 +1,5 @@
 // --- SEGURANÇA: PREVENIR BOTÃO VOLTAR ---
-window.addEventListener('pageshow', function(event) {
+window.addEventListener('pageshow', function (event) {
     if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
         window.location.reload();
     }
@@ -7,7 +7,7 @@ window.addEventListener('pageshow', function(event) {
 
 function criarNavbar(nomePagina) {
     const token = localStorage.getItem('token');
-    
+
     // --- VERIFICAÇÃO RIGOROSA ---
     if (!token) {
         // Se não tem token, a página continua invisível e redireciona
@@ -21,8 +21,8 @@ function criarNavbar(nomePagina) {
     const savedAvatar = localStorage.getItem('userAvatar');
     const userRole = localStorage.getItem('userRole');
 
-    const avatarSrc = (savedAvatar && savedAvatar !== "null") 
-        ? savedAvatar 
+    const avatarSrc = (savedAvatar && savedAvatar !== "null")
+        ? savedAvatar
         : `https://ui-avatars.com/api/?name=${userRole}&background=random`;
 
     const navHTML = `
@@ -60,7 +60,7 @@ function criarNavbar(nomePagina) {
 // LÓGICA DOS LINKS DO MENU
 function gerarLinksNavegacao(role, paginaAtual) {
     let links = '';
-    
+
     if (paginaAtual !== 'Minhas Notas') {
         links += `<a href="menu.html" class="dropdown-item">📝 Minhas Notas</a>`;
     }
@@ -72,7 +72,12 @@ function gerarLinksNavegacao(role, paginaAtual) {
     if (paginaAtual !== 'Dashboard') {
         links += `<a href="dashboard.html" class="dropdown-item">📊 Dashboard Geral</a>`;
     }
-    
+
+    // Só mostra o link se for ADMIN_MASTER ou FULL
+    if ((role === 'ADMIN_MASTER' || role === 'FULL') && paginaAtual !== 'Gestão Radius') {
+        links += `<a href="radius.html" class="dropdown-item">📡 Gestão Radius (VM)</a>`;
+    }
+
     return links;
 }
 
@@ -81,7 +86,7 @@ function toggleMenu() {
     if (menu) menu.classList.toggle('show');
 }
 
-window.onclick = function(event) {
+window.onclick = function (event) {
     if (!event.target.matches('.user-avatar')) {
         const menu = document.getElementById('dropdownMenu');
         if (menu && menu.classList.contains('show')) menu.classList.remove('show');
@@ -95,7 +100,7 @@ function logout() {
 }
 
 function triggerFile(e) {
-    e.stopPropagation(); 
+    e.stopPropagation();
     document.getElementById('fileInput').click();
 }
 
@@ -124,6 +129,6 @@ async function uploadFoto(input) {
             } else {
                 alert("Erro ao salvar foto.");
             }
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     };
 }

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão Radius (VM)</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="card admin-mode" style="margin-top: 20px;">
+        
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+            <h2>📡 Gestão Radius</h2>
+        </div>
+
+        <form id="radiusForm" class="admin-form-grid" style="align-items: flex-end;">
+            <div>
+                <label>Usuário</label>
+                <input type="text" id="r_username" placeholder="Ex: adalberto.alecrim" required>
+            </div>
+            <div>
+                <label>Senha</label>
+                <input type="text" id="r_password" placeholder="Senha de conexão" required>
+            </div>
+            
+            <div>
+                <label>Grupo</label>
+                <select id="r_group" required>
+                    <option value="" disabled selected>Carregando opções...</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn-success" style="height: 42px; margin-bottom: 2px;">
+                <span id="btnText">Criar Acesso</span>
+            </button>
+        </form>
+
+        <div class="table-responsive">
+            <table id="radiusTable">
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Senha (radcheck)</th>
+                        <th>Grupo (radusergroup)</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="4" align="center">Carregando dados da VM...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="navbar.js"></script>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const myRole = localStorage.getItem('userRole'); 
+        let editingUsername = null;
+
+        // 1. SEGURANÇA
+        if (!token) { 
+            window.location.href = 'login.html'; 
+        }
+        else if (myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') {
+            alert("⛔ Acesso Negado!\nVocê não tem permissão para acessar a Gestão Radius.");
+            window.location.href = 'menu.html';
+        }
+        else {
+            document.body.style.display = 'flex';
+            criarNavbar('Gestão Radius');
+            
+            // Inicia carregando as opções e a tabela
+            carregarOpcoes(); 
+            carregarRadius();
+        }
+
+       // --- CARREGAR OPÇÕES DO SELECT (CORRIGIDO: PUXA DA VM) ---
+        async function carregarOpcoes() {
+            try {
+                // Agora chama a rota que busca os grupos REAIS do Radius na VM
+                const res = await fetch('/api/radius/groups', { headers: { 'Authorization': `Bearer ${token}` } });
+                
+                const select = document.getElementById('r_group');
+                select.innerHTML = '<option value="" disabled selected>Selecione o Plano/Grupo</option>';
+
+                if (res.ok) {
+                    const lista = await res.json();
+                    
+                    if (lista.length === 0) {
+                        // Se não tiver nenhum grupo lá, adiciona opção manual ou aviso
+                        select.innerHTML += `<option disabled>Nenhum grupo encontrado na VM</option>`;
+                    }
+
+                    // Preenche com os dados da VM (MT_FULL, N2, etc)
+                    lista.forEach(item => {
+                        // O banco retorna { groupname: 'MT_FULL' }
+                        if(item.groupname) {
+                            select.innerHTML += `<option value="${item.groupname}">${item.groupname}</option>`;
+                        }
+                    });
+                } else {
+                    console.error("Erro ao buscar grupos do Radius");
+                    select.innerHTML += `<option disabled>Erro ao carregar</option>`;
+                }
+            } catch (err) { console.error("Erro de conexão", err); }
+        }
+
+        // --- LISTAR RADIUS ---
+        async function carregarRadius() {
+            try {
+                const res = await fetch('/api/radius/users', { headers: { 'Authorization': `Bearer ${token}` } });
+                const users = await res.json();
+                const tbody = document.querySelector('#radiusTable tbody');
+                tbody.innerHTML = '';
+
+                if(users.error) {
+                    tbody.innerHTML = `<tr><td colspan="4" align="center" style="color:red">Erro: ${users.error}</td></tr>`;
+                    return;
+                }
+
+                if(users.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" align="center">Nenhum usuário encontrado na VM.</td></tr>`;
+                    return;
+                }
+
+                users.forEach(u => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${u.username}</strong></td>
+                            <td>${u.password}</td>
+                            <td><span class="tag-badge">${u.groupname || 'Sem Grupo'}</span></td>
+                            <td>
+                                <button class="action-btn btn-edit" onclick="prepararEdicao('${u.username}', '${u.password}', '${u.groupname}')">✏️</button>
+                                <button class="action-btn btn-del" onclick="excluirRadius('${u.username}')">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {
+                document.querySelector('#radiusTable tbody').innerHTML = `<tr><td colspan="4" align="center" style="color:red">Falha na conexão com a VM.</td></tr>`;
+            }
+        }
+
+        // --- CRIAR / EDITAR ---
+        document.getElementById('radiusForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                username: document.getElementById('r_username').value,
+                password: document.getElementById('r_password').value,
+                groupname: document.getElementById('r_group').value
+            };
+
+            let url = '/api/radius/users';
+            let method = 'POST';
+
+            if (editingUsername) {
+                url = `/api/radius/users/${editingUsername}`;
+                method = 'PUT';
+            }
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            
+            if (res.ok) {
+                alert(result.message);
+                limparForm();
+                carregarRadius();
+            } else {
+                alert("Erro: " + result.error);
+            }
+        });
+
+        // --- PREPARAR EDIÇÃO ---
+        function prepararEdicao(user, pass, group) {
+            editingUsername = user;
+            document.getElementById('r_username').value = user;
+            document.getElementById('r_username').disabled = true; 
+            document.getElementById('r_password').value = pass;
+            
+            // Seleciona o item correto no dropdown
+            const select = document.getElementById('r_group');
+            if (group && group !== 'null' && group !== 'undefined') {
+                select.value = group;
+            } else {
+                select.value = ""; // Reseta se não tiver grupo
+            }
+            
+            document.getElementById('btnText').innerText = "Salvar Alterações";
+            document.querySelector('.btn-success').style.background = "#e67e22";
+        }
+
+        function limparForm() {
+            editingUsername = null;
+            document.getElementById('radiusForm').reset();
+            document.getElementById('r_username').disabled = false;
+            document.getElementById('btnText').innerText = "Criar Acesso";
+            document.querySelector('.btn-success').style.background = "";
+            document.getElementById('r_group').value = ""; // Reseta o select
+        }
+
+        // --- EXCLUIR ---
+        async function excluirRadius(username) {
+            if(!confirm(`Tem certeza que deseja apagar o usuário ${username} da VM?`)) return;
+
+            const res = await fetch(`/api/radius/users/${username}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                alert("Usuário removido!");
+                carregarRadius();
+            } else {
+                alert("Erro ao excluir.");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -448,4 +448,117 @@ app.get('/api/vm/status', authenticateToken, async (req, res) => {
     }
 });
 
+// ================= GESTÃO RADIUS (VM EXTERNA) =================
+
+// Middleware auxiliar ou verificação manual em cada rota
+const checkRadiusPermission = (req, res, next) => {
+    if (req.user.role !== 'ADMIN_MASTER' && req.user.role !== 'FULL') {
+        return res.status(403).json({ error: "Acesso negado: Apenas Admin ou Full." });
+    }
+    next();
+};
+
+// 1. LISTAR USUÁRIOS RADIUS
+app.get('/api/radius/users', authenticateToken, checkRadiusPermission, async (req, res) => {
+    try {
+        const sql = `
+            SELECT rc.id, rc.username, rc.value as password, rug.groupname 
+            FROM radcheck rc 
+            LEFT JOIN radusergroup rug ON rc.username = rug.username 
+            WHERE rc.attribute = 'Cleartext-Password'
+            ORDER BY rc.id DESC
+        `;
+        const result = await dbVM.query(sql);
+        res.json(result.rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Erro ao buscar dados na VM" });
+    }
+});
+
+// 2. CRIAR USUÁRIO RADIUS
+app.post('/api/radius/users', authenticateToken, checkRadiusPermission, async (req, res) => {
+    const { username, password, groupname } = req.body;
+    if (!username || !password) return res.status(400).json({ error: "Usuário e Senha obrigatórios" });
+
+    try {
+        const check = await dbVM.query("SELECT username FROM radcheck WHERE username = $1", [username]);
+        if (check.rows.length > 0) return res.status(400).json({ error: "Usuário já existe no Radius" });
+
+        await dbVM.query(
+            "INSERT INTO radcheck (username, attribute, op, value) VALUES ($1, 'Cleartext-Password', ':=', $2)",
+            [username, password]
+        );
+
+        if (groupname) {
+            await dbVM.query(
+                "INSERT INTO radusergroup (username, groupname, priority) VALUES ($1, $2, 1)",
+                [username, groupname]
+            );
+        }
+        res.json({ message: "Usuário Radius criado!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao criar na VM" }); }
+});
+
+// 3. EDITAR USUÁRIO
+app.put('/api/radius/users/:username', authenticateToken, checkRadiusPermission, async (req, res) => {
+    const { username } = req.params;
+    const { password, groupname } = req.body;
+
+    try {
+        if (password) {
+            await dbVM.query(
+                "UPDATE radcheck SET value = $1 WHERE username = $2 AND attribute = 'Cleartext-Password'",
+                [password, username]
+            );
+        }
+        if (groupname) {
+            await dbVM.query("DELETE FROM radusergroup WHERE username = $1", [username]);
+            await dbVM.query(
+                "INSERT INTO radusergroup (username, groupname, priority) VALUES ($1, $2, 1)",
+                [username, groupname]
+            );
+        }
+        res.json({ message: "Usuário Radius atualizado!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar na VM" }); }
+});
+
+// 4. EXCLUIR USUÁRIO
+app.delete('/api/radius/users/:username', authenticateToken, checkRadiusPermission, async (req, res) => {
+    const { username } = req.params;
+    try {
+        await dbVM.query("DELETE FROM radcheck WHERE username = $1", [username]);
+        await dbVM.query("DELETE FROM radusergroup WHERE username = $1", [username]);
+        res.json({ message: "Usuário removido do Radius!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao excluir na VM" }); }
+});
+
+// 5. LISTAR GRUPOS/PLANOS DISPONÍVEIS (Para o Dropdown)
+app.get('/api/radius/groups', authenticateToken, checkRadiusPermission, async (req, res) => {
+    try {
+        // Busca todos os nomes de grupos distintos usados na radusergroup
+        // (E opcionalmente na radgroupreply se você tiver planos definidos lá sem usuários ainda)
+        const sql = `
+            SELECT DISTINCT groupname 
+            FROM radusergroup 
+            UNION 
+            SELECT DISTINCT groupname 
+            FROM radgroupreply 
+            ORDER BY groupname
+        `;
+        
+        const result = await dbVM.query(sql);
+        res.json(result.rows);
+    } catch (e) {
+        console.error(e);
+        // Se der erro (ex: tabela radgroupreply vazia), tenta só na radusergroup
+        try {
+            const resultBackup = await dbVM.query("SELECT DISTINCT groupname FROM radusergroup ORDER BY groupname");
+            res.json(resultBackup.rows);
+        } catch (errBackup) {
+            res.status(500).json({ error: "Erro ao buscar grupos" });
+        }
+    }
+});
+
 app.listen(3000, () => console.log('Servidor rodando na porta 3000'));
