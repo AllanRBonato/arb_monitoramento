@@ -43,8 +43,11 @@ npm init -y
 ----------------------------------------------
 
 📦 Instalando as dependências
+
 npm install prisma@5.22.0 --save-dev
+
 npm install @prisma/client@5.22.0
+
 npm install nodemon --save-dev
 
 ----------------------------------------------
