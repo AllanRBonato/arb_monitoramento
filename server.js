@@ -450,12 +450,19 @@ app.get('/api/vm/status', authenticateToken, async (req, res) => {
 
 // ================= GESTÃO RADIUS (VM EXTERNA) =================
 
-// Middleware auxiliar ou verificação manual em cada rota
+// Middleware de Segurança Reforçada
 const checkRadiusPermission = (req, res, next) => {
-    if (req.user.role !== 'ADMIN_MASTER' && req.user.role !== 'FULL') {
-        return res.status(403).json({ error: "Acesso negado: Apenas Admin ou Full." });
+    const { role, sector } = req.user;
+
+    // REGRA: Precisa ser (MASTER ou FULL) **E** estar no setor (SUPORTE_N2)
+    const isCargoAlto = (role === 'ADMIN_MASTER' || role === 'FULL');
+    const isSetorCorreto = (sector === 'SUPORTE_N2');
+
+    if (isCargoAlto && isSetorCorreto) {
+        next(); // Pode passar
+    } else {
+        return res.status(403).json({ error: "Acesso Negado: Restrito ao SUPORTE_N2 (Nível Gerência/Master)." });
     }
-    next();
 };
 
 // 1. LISTAR USUÁRIOS RADIUS

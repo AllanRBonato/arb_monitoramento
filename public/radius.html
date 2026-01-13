@@ -61,21 +61,25 @@
     <script>
         const token = localStorage.getItem('token');
         const myRole = localStorage.getItem('userRole'); 
+        const mySector = localStorage.getItem('userSector'); // <--- Pega o setor
         let editingUsername = null;
 
-        // 1. SEGURANÇA
+        // 1. SEGURANÇA DE LOGIN
         if (!token) { 
             window.location.href = 'login.html'; 
         }
-        else if (myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') {
-            alert("⛔ Acesso Negado!\nVocê não tem permissão para acessar a Gestão Radius.");
+        // 2. SEGURANÇA DE CARGO E SETOR
+        // Se não for (Master OU Full) OU se o setor não for SUPORTE_N2...
+        else if (
+            (myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') || 
+            mySector !== 'SUPORTE_N2'
+        ) {
+            alert("⛔ Acesso Negado!\nEsta ferramenta é exclusiva para Gestores do SUPORTE_N2.");
             window.location.href = 'menu.html';
         }
         else {
             document.body.style.display = 'flex';
             criarNavbar('Gestão Radius');
-            
-            // Inicia carregando as opções e a tabela
             carregarOpcoes(); 
             carregarRadius();
         }

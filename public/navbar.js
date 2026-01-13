@@ -60,24 +60,34 @@ function criarNavbar(nomePagina) {
 // LÓGICA DOS LINKS DO MENU
 function gerarLinksNavegacao(role, paginaAtual) {
     let links = '';
+    
+    // Precisamos pegar o setor salvo no login
+    const userSector = localStorage.getItem('userSector');
 
+    // 1. Link para Notas
     if (paginaAtual !== 'Minhas Notas') {
         links += `<a href="menu.html" class="dropdown-item">📝 Minhas Notas</a>`;
     }
 
+    // 2. Link para Admin (Chefes em geral)
     if ((role === 'ADMIN_MASTER' || role === 'FULL') && paginaAtual !== 'Gestão de Usuários') {
         links += `<a href="admin.html" class="dropdown-item">👥 Gestão de Usuários</a>`;
     }
 
-    if (paginaAtual !== 'Dashboard') {
-        links += `<a href="dashboard.html" class="dropdown-item">📊 Dashboard Geral</a>`;
-    }
-
-    // Só mostra o link se for ADMIN_MASTER ou FULL
-    if ((role === 'ADMIN_MASTER' || role === 'FULL') && paginaAtual !== 'Gestão Radius') {
+    // 3. Link para Radius (SÓ PARA SUPORTE_N2 COM CARGO ALTO)
+    if (
+        (role === 'ADMIN_MASTER' || role === 'FULL') && 
+        userSector === 'SUPORTE_N2' && 
+        paginaAtual !== 'Gestão Radius'
+    ) {
         links += `<a href="radius.html" class="dropdown-item">📡 Gestão Radius (VM)</a>`;
     }
 
+    // 4. Link para Dashboard
+    if (paginaAtual !== 'Dashboard') {
+        links += `<a href="dashboard.html" class="dropdown-item">📊 Dashboard Geral</a>`;
+    }
+    
     return links;
 }
 
