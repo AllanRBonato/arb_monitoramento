@@ -8,45 +8,92 @@
     <style>
         body { display: none; }
         
-        /* CORREÇÃO DO LAYOUT DA TABELA */
-        
-        /* O input de senha deve parecer texto comum */
-        .table-input-password {
-            background: transparent !important; /* Remove fundo branco */
-            border: none !important;            /* Remove borda */
-            box-shadow: none !important;        /* Remove sombras */
-            outline: none !important;           /* Remove contorno ao clicar */
-            padding: 0;
-            margin: 0;
-            font-family: monospace; /* Fonte fixa para as bolinhas ficarem alinhadas */
-            font-size: 1rem;
-            color: #333;
-            width: 135px; /* Largura fixa para não empurrar a tabela */
-            cursor: text;
+        /* --- CORREÇÕES VISUAIS --- */
+
+        /* 1. Remove o olho nativo do navegador */
+        input::-ms-reveal, input::-ms-clear { display: none !important; }
+
+        /* --- ESTILO DO FORMULÁRIO (OLHO DENTRO DO INPUT) --- */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
         }
 
-        /* Botão do olho (SVG) */
-        .btn-eye {
-            background: none;
-            border: none;
+        .password-wrapper input {
+            width: 100%;
+            padding-right: 40px !important; /* Espaço para o olho não ficar em cima do texto */
+        }
+
+        .btn-eye-form {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%); /* Centraliza verticalmente exato */
+            background: transparent !important; /* Fundo transparente */
+            border: none !important;
+            color: #7f8c8d;
             cursor: pointer;
-            padding: 4px;
+            width: 30px !important; /* Tamanho fixo pequeno */
+            height: 30px !important;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #555; /* Cor cinza escuro/preto */
-            transition: color 0.2s;
+            z-index: 10;
         }
-        .btn-eye:hover {
-            color: #000;
-        }
+        .btn-eye-form:hover { color: #333; }
+
+
+        /* --- ESTILO DA TABELA --- */
         
-        /* Alinhamento da célula de senha */
+        /* Célula container */
         .cell-password {
             display: flex;
             align-items: center;
-            gap: 5px; /* Espaço entre a senha e o olho */
+            justify-content: space-between;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0 5px;
+            height: 35px;
+            width: 100%;
         }
+
+        /* Input da tabela */
+        .table-input-password {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+            padding: 0; 
+            margin: 0;
+            font-family: monospace; 
+            font-size: 1.1rem;
+            color: #000 !important;
+            
+            /* MUDANÇA: Ocupa 100% da célula (que vamos alargar no HTML) */
+            width: 100% !important; 
+            
+            height: 100%;
+            cursor: text;
+            letter-spacing: 2px;
+        }
+
+        /* Botão do olho na tabela */
+        .btn-eye-table {
+            width: 30px !important;
+            height: 30px !important;
+            background: none !important; 
+            border: none !important; 
+            cursor: pointer;
+            padding: 0; 
+            display: flex; 
+            align-items: center;
+            justify-content: center; 
+            color: #555; 
+            flex-shrink: 0; /* Não deixa esmagar */
+        }
+        .btn-eye-table:hover { color: #000; transform: scale(1.1); }
+
     </style>
 </head>
 <body>
@@ -61,18 +108,20 @@
         <form id="radiusForm" class="admin-form-grid" style="align-items: flex-end; grid-template-columns: 1fr 1fr 1fr 1fr auto;">
             <div>
                 <label>Usuário</label>
-                <input type="text" id="r_username" placeholder="Ex: adalberto.piripimpim" required>
+                <input type="text" id="r_username" placeholder="Ex: cliente.silva" required>
             </div>
             
-            <div style="position: relative;">
+            <div>
                 <label>Senha</label>
-                <input type="password" id="r_password" placeholder="Senha" required style="padding-right: 15px;">
-                <button type="button" onclick="toggleFormPassword()" class="btn-eye" style="position: absolute; right: 5px; bottom: 5px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 12.332 10.119 13.5 8 13.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>
-                    </svg>
-                </button>
+                <div class="password-wrapper">
+                    <input type="password" id="r_password" placeholder="Senha" required>
+                    <button type="button" onclick="toggleFormPassword()" class="btn-eye-form" tabindex="-1" title="Mostrar Senha">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 12.332 10.119 13.5 8 13.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
             
             <div>
@@ -89,7 +138,7 @@
                 </select>
             </div>
             
-            <button type="submit" class="btn-success" style="height: 42px; margin-bottom: 2px;">
+            <button type="submit" class="btn-success" style="height: 40px; margin-bottom: 0px;">
                 <span id="btnText">Criar</span>
             </button>
         </form>
@@ -98,10 +147,10 @@
             <table id="radiusTable">
                 <thead>
                     <tr>
-                        <th>Usuário</th>
-                        <th>Senha</th>
-                        <th>Setor (P1)</th>
-                        <th>Acesso (P2)</th>
+                        <th style="width: 20%;">Usuário</th>
+                        <th style="width: 220px;">Senha</th> 
+                        <th style="width: 15%;">Setor (P1)</th>
+                        <th style="width: 15%;">Acesso (P2)</th>
                         <th style="width: 100px;">Ações</th>
                     </tr>
                 </thead>
@@ -120,10 +169,7 @@
         const mySector = localStorage.getItem('userSector'); 
         let editingUsername = null;
 
-        // SEGURANÇA
-        if (!token) { 
-            window.location.href = 'login.html'; 
-        }
+        if (!token) { window.location.href = 'login.html'; }
         else if ((myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') || mySector !== 'SUPORTE_N2') {
             alert("⛔ Acesso Negado!\nExclusivo para Gestores do SUPORTE_N2.");
             window.location.href = 'menu.html';
@@ -135,44 +181,34 @@
             carregarRadius();
         }
 
-        // --- TOGGLE SENHA FORMULÁRIO ---
+        // --- FUNÇÕES DE TOGGLE ---
         function toggleFormPassword() {
             const input = document.getElementById('r_password');
             input.type = input.type === "password" ? "text" : "password";
         }
 
-        // --- TOGGLE SENHA TABELA ---
         function toggleTablePassword(id) {
             const input = document.getElementById(id);
             input.type = input.type === "password" ? "text" : "password";
         }
 
-        // --- CARREGAR OPÇÕES ---
+        // --- CARREGAR SELECTS ---
         async function carregarListasDropdown() {
             try {
                 const res = await fetch('/api/radius/options', { headers: { 'Authorization': `Bearer ${token}` } });
-                
                 if (res.ok) {
                     const dados = await res.json();
-                    
                     const selSetor = document.getElementById('r_setor');
                     const selAcesso = document.getElementById('r_acesso');
-                    
                     selSetor.innerHTML = '<option value="" disabled selected>Selecione Setor</option>';
                     selAcesso.innerHTML = '<option value="" disabled selected>Selecione Acesso</option>';
-
-                    dados.setores.forEach(item => {
-                        selSetor.innerHTML += `<option value="${item.groupname}">${item.groupname}</option>`;
-                    });
-
-                    dados.acessos.forEach(item => {
-                        selAcesso.innerHTML += `<option value="${item.groupname}">${item.groupname}</option>`;
-                    });
+                    dados.setores.forEach(i => selSetor.innerHTML += `<option value="${i.groupname}">${i.groupname}</option>`);
+                    dados.acessos.forEach(i => selAcesso.innerHTML += `<option value="${i.groupname}">${i.groupname}</option>`);
                 }
-            } catch (err) { console.error("Erro ao carregar selects", err); }
+            } catch (err) { console.error(err); }
         }
 
-        // --- LISTAR USUÁRIOS ---
+        // --- CARREGAR TABELA ---
         async function carregarRadius() {
             try {
                 const res = await fetch('/api/radius/users', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -180,54 +216,40 @@
                 const tbody = document.querySelector('#radiusTable tbody');
                 tbody.innerHTML = '';
 
-                if(users.error) {
-                    tbody.innerHTML = `<tr><td colspan="5" align="center" style="color:red">Erro: ${users.error}</td></tr>`;
-                    return;
-                }
-                if(users.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" align="center">Vazio.</td></tr>`;
-                    return;
-                }
+                if(users.error) return tbody.innerHTML = `<tr><td colspan="5" align="center" style="color:red">Erro: ${users.error}</td></tr>`;
+                if(users.length === 0) return tbody.innerHTML = `<tr><td colspan="5" align="center">Vazio.</td></tr>`;
 
                 users.forEach((u, index) => {
                     const passId = `pass_field_${index}`;
-                    
-                    // Ícone de Olho (SVG) - Código otimizado
                     const eyeIcon = `
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 12.332 10.119 13.5 8 13.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
                             <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>
-                        </svg>
-                    `;
+                        </svg>`;
 
                     tbody.innerHTML += `
                         <tr>
                             <td><strong>${u.username}</strong></td>
-                            
                             <td>
                                 <div class="cell-password">
                                     <input type="password" id="${passId}" value="${u.password}" class="table-input-password" readonly>
-                                    <button class="btn-eye" onclick="toggleTablePassword('${passId}')" title="Ver Senha">
-                                        ${eyeIcon}
-                                    </button>
+                                    <button class="btn-eye-table" onclick="toggleTablePassword('${passId}')" title="Ver Senha" tabindex="-1">${eyeIcon}</button>
                                 </div>
                             </td>
-
                             <td><span class="tag-badge" style="background:#e8f8f5; color:#27ae60;">${u.setor || '-'}</span></td>
                             <td><span class="tag-badge" style="background:#fef9e7; color:#f1c40f;">${u.acesso || '-'}</span></td>
                             <td>
                                 <button class="action-btn btn-edit" onclick="prepararEdicao('${u.username}', '${u.password}', '${u.setor}', '${u.acesso}')">✏️</button>
                                 <button class="action-btn btn-del" onclick="excluirRadius('${u.username}')">🗑️</button>
                             </td>
-                        </tr>
-                    `;
+                        </tr>`;
                 });
-            } catch(e) {
+            } catch(e) { 
                 document.querySelector('#radiusTable tbody').innerHTML = `<tr><td colspan="5" align="center" style="color:red">Falha na conexão com a VM.</td></tr>`;
             }
         }
 
-        // --- ENVIAR FORMULÁRIO (CRIAR/EDITAR) ---
+        // --- SUBMIT DO FORM ---
         document.getElementById('radiusForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const data = {
@@ -236,41 +258,27 @@
                 setor: document.getElementById('r_setor').value,
                 acesso: document.getElementById('r_acesso').value
             };
-
-            let url = '/api/radius/users';
-            let method = 'POST';
-
-            if (editingUsername) {
-                url = `/api/radius/users/${editingUsername}`;
-                method = 'PUT';
-            }
+            
+            let url = editingUsername ? `/api/radius/users/${editingUsername}` : '/api/radius/users';
+            let method = editingUsername ? 'PUT' : 'POST';
 
             const res = await fetch(url, {
                 method: method,
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(data)
             });
-
             const result = await res.json();
             
-            if (res.ok) {
-                alert(result.message);
-                limparForm();
-                carregarRadius();
-            } else {
-                alert("Erro: " + result.error);
-            }
+            if (res.ok) { alert(result.message); limparForm(); carregarRadius(); } 
+            else { alert("Erro: " + result.error); }
         });
 
-        // --- PREPARAR EDIÇÃO ---
         function prepararEdicao(user, pass, setor, acesso) {
             editingUsername = user;
             document.getElementById('r_username').value = user;
             document.getElementById('r_username').disabled = true; 
             document.getElementById('r_password').value = pass;
-            
-            // Revela a senha ao editar
-            document.getElementById('r_password').type = "text"; 
+            document.getElementById('r_password').type = "text"; // Mostra senha ao editar
 
             if(setor && setor !== 'null') document.getElementById('r_setor').value = setor;
             if(acesso && acesso !== 'null') document.getElementById('r_acesso').value = acesso;
@@ -290,21 +298,10 @@
             document.getElementById('r_acesso').value = "";
         }
 
-        // --- EXCLUIR ---
         async function excluirRadius(username) {
             if(!confirm(`Apagar ${username}?`)) return;
-
-            const res = await fetch(`/api/radius/users/${username}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (res.ok) {
-                alert("Removido!");
-                carregarRadius();
-            } else {
-                alert("Erro ao excluir.");
-            }
+            const res = await fetch(`/api/radius/users/${username}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) { alert("Removido!"); carregarRadius(); } else { alert("Erro ao excluir."); }
         }
     </script>
 </body>
