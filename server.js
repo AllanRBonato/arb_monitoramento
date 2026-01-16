@@ -182,7 +182,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao criar (Email duplicado?)" }); }
 });
 
-// 5. ATUALIZAR USUÁRIO (PUT) (COM A MESMA PROTEÇÃO)
+// 5. ATUALIZAR USUÁRIO
 app.put('/api/users/:id', authenticateToken, async (req, res) => {
     // Validação básica
     if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão" });
@@ -448,123 +448,144 @@ app.get('/api/vm/status', authenticateToken, async (req, res) => {
     }
 });
 
-// ================= GESTÃO RADIUS (VM EXTERNA) =================
+// ================= GESTÃO RADIUS (VM EXTERNA) - TABELA 'USERS' =================
 
-// Middleware de Segurança Reforçada
+// Middleware de Segurança
 const checkRadiusPermission = (req, res, next) => {
     const { role, sector } = req.user;
-
-    // REGRA: Precisa ser (MASTER ou FULL) **E** estar no setor (SUPORTE_N2)
     const isCargoAlto = (role === 'ADMIN_MASTER' || role === 'FULL');
     const isSetorCorreto = (sector === 'SUPORTE_N2');
 
     if (isCargoAlto && isSetorCorreto) {
-        next(); // Pode passar
+        next();
     } else {
-        return res.status(403).json({ error: "Acesso Negado: Restrito ao SUPORTE_N2 (Nível Gerência/Master)." });
+        return res.status(403).json({ error: "Acesso Negado: Restrito ao SUPORTE_N2." });
     }
 };
 
-// 1. LISTAR USUÁRIOS RADIUS
+// 1. LISTAR USUÁRIOS (Trazendo Senha da tabela 'users', Setor e Acesso)
 app.get('/api/radius/users', authenticateToken, checkRadiusPermission, async (req, res) => {
     try {
+        // MUDANÇA: radcheck virou users | value virou password
         const sql = `
-            SELECT rc.id, rc.username, rc.value as password, rug.groupname 
-            FROM radcheck rc 
-            LEFT JOIN radusergroup rug ON rc.username = rug.username 
-            WHERE rc.attribute = 'Cleartext-Password'
-            ORDER BY rc.id DESC
+            SELECT 
+                u.username, 
+                u.password, 
+                (SELECT sa.groupname FROM setor_acesso sa WHERE sa.username = u.username AND sa.priority = 1 LIMIT 1) as setor,
+                (SELECT sa.groupname FROM setor_acesso sa WHERE sa.username = u.username AND sa.priority = 2 LIMIT 1) as acesso
+            FROM users u 
+            WHERE u.attribute = 'Cleartext-Password'
+            ORDER BY u.id DESC
         `;
         const result = await dbVM.query(sql);
         res.json(result.rows);
     } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: "Erro ao buscar dados na VM" });
+        console.error("ERRO DETALHADO DA VM:", e.message);
+        res.status(500).json({ error: "Erro ao buscar dados na VM: " + e.message });
     }
 });
 
-// 2. CRIAR USUÁRIO RADIUS
+// 2. OBTER OPÇÕES PARA OS DROPDOWNS (Mantém igual, pois busca da setor_acesso)
+app.get('/api/radius/options', authenticateToken, checkRadiusPermission, async (req, res) => {
+    try {
+        const setoresRes = await dbVM.query("SELECT DISTINCT groupname FROM setor_acesso WHERE priority = 1 ORDER BY groupname");
+        const acessosRes = await dbVM.query("SELECT DISTINCT groupname FROM setor_acesso WHERE priority = 2 ORDER BY groupname");
+
+        res.json({
+            setores: setoresRes.rows,
+            acessos: acessosRes.rows
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Erro ao carregar opções" });
+    }
+});
+
+// 3. CRIAR USUÁRIO (Insere na tabela 'users' e na 'setor_acesso')
 app.post('/api/radius/users', authenticateToken, checkRadiusPermission, async (req, res) => {
-    const { username, password, groupname } = req.body;
-    if (!username || !password) return res.status(400).json({ error: "Usuário e Senha obrigatórios" });
+    const { username, password, setor, acesso } = req.body;
+    
+    if (!username || !password || !setor || !acesso) {
+        return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+    }
 
     try {
-        const check = await dbVM.query("SELECT username FROM radcheck WHERE username = $1", [username]);
+        // Verifica duplicidade na tabela users
+        const check = await dbVM.query("SELECT username FROM users WHERE username = $1", [username]);
         if (check.rows.length > 0) return res.status(400).json({ error: "Usuário já existe no Radius" });
 
+        // 1. Cria login/senha na tabela USERS
+        // Nota: Ajustado para usar a coluna 'password' em vez de 'value'
         await dbVM.query(
-            "INSERT INTO radcheck (username, attribute, op, value) VALUES ($1, 'Cleartext-Password', ':=', $2)",
+            "INSERT INTO users (username, attribute, op, password) VALUES ($1, 'Cleartext-Password', ':=', $2)",
             [username, password]
         );
 
-        if (groupname) {
-            await dbVM.query(
-                "INSERT INTO radusergroup (username, groupname, priority) VALUES ($1, $2, 1)",
-                [username, groupname]
-            );
-        }
-        res.json({ message: "Usuário Radius criado!" });
-    } catch (e) { res.status(500).json({ error: "Erro ao criar na VM" }); }
+        // 2. Define Setor (Priority 1)
+        await dbVM.query(
+            "INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 1)",
+            [username, setor]
+        );
+
+        // 3. Define Acesso (Priority 2)
+        await dbVM.query(
+            "INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 2)",
+            [username, acesso]
+        );
+
+        res.json({ message: "Acesso Radius criado com sucesso!" });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Erro ao criar na VM: " + e.message });
+    }
 });
 
-// 3. EDITAR USUÁRIO
+// 4. ATUALIZAR USUÁRIO
 app.put('/api/radius/users/:username', authenticateToken, checkRadiusPermission, async (req, res) => {
     const { username } = req.params;
-    const { password, groupname } = req.body;
+    const { password, setor, acesso } = req.body;
 
     try {
+        // Atualiza Senha na tabela USERS
         if (password) {
             await dbVM.query(
-                "UPDATE radcheck SET value = $1 WHERE username = $2 AND attribute = 'Cleartext-Password'",
+                "UPDATE users SET password = $1 WHERE username = $2 AND attribute = 'Cleartext-Password'",
                 [password, username]
             );
         }
-        if (groupname) {
-            await dbVM.query("DELETE FROM radusergroup WHERE username = $1", [username]);
-            await dbVM.query(
-                "INSERT INTO radusergroup (username, groupname, priority) VALUES ($1, $2, 1)",
-                [username, groupname]
-            );
+
+        // Atualiza Setor e Acesso
+        if (setor || acesso) {
+            await dbVM.query("DELETE FROM setor_acesso WHERE username = $1", [username]);
+            
+            if(setor) {
+                await dbVM.query("INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 1)", [username, setor]);
+            }
+            if(acesso) {
+                await dbVM.query("INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 2)", [username, acesso]);
+            }
         }
+
         res.json({ message: "Usuário Radius atualizado!" });
-    } catch (e) { res.status(500).json({ error: "Erro ao atualizar na VM" }); }
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Erro ao atualizar na VM: " + e.message });
+    }
 });
 
-// 4. EXCLUIR USUÁRIO
+// 5. EXCLUIR USUÁRIO
 app.delete('/api/radius/users/:username', authenticateToken, checkRadiusPermission, async (req, res) => {
     const { username } = req.params;
     try {
-        await dbVM.query("DELETE FROM radcheck WHERE username = $1", [username]);
-        await dbVM.query("DELETE FROM radusergroup WHERE username = $1", [username]);
-        res.json({ message: "Usuário removido do Radius!" });
-    } catch (e) { res.status(500).json({ error: "Erro ao excluir na VM" }); }
-});
+        // Apaga da tabela USERS
+        await dbVM.query("DELETE FROM users WHERE username = $1", [username]);
+        // Apaga da tabela setor_acesso
+        await dbVM.query("DELETE FROM setor_acesso WHERE username = $1", [username]);
 
-// 5. LISTAR GRUPOS/PLANOS DISPONÍVEIS (Para o Dropdown)
-app.get('/api/radius/groups', authenticateToken, checkRadiusPermission, async (req, res) => {
-    try {
-        // Busca todos os nomes de grupos distintos usados na radusergroup
-        // (E opcionalmente na radgroupreply se você tiver planos definidos lá sem usuários ainda)
-        const sql = `
-            SELECT DISTINCT groupname 
-            FROM radusergroup 
-            UNION 
-            SELECT DISTINCT groupname 
-            FROM radgroupreply 
-            ORDER BY groupname
-        `;
-        
-        const result = await dbVM.query(sql);
-        res.json(result.rows);
+        res.json({ message: "Usuário removido da VM!" });
     } catch (e) {
         console.error(e);
-        // Se der erro (ex: tabela radgroupreply vazia), tenta só na radusergroup
-        try {
-            const resultBackup = await dbVM.query("SELECT DISTINCT groupname FROM radusergroup ORDER BY groupname");
-            res.json(resultBackup.rows);
-        } catch (errBackup) {
-            res.status(500).json({ error: "Erro ao buscar grupos" });
-        }
+        res.status(500).json({ error: "Erro ao excluir na VM: " + e.message });
     }
 });
 
