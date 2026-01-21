@@ -78,14 +78,14 @@
         input:checked + .slider { background-color: #27ae60; }
         input:checked + .slider:before { transform: translateX(14px); }
 
-        /* --- CORREÇÃO DOS BADGES (Sem quebra de linha) --- */
+        /* --- CORREÇÃO DOS BADGES --- */
         .log-badge { 
             font-size: 0.75rem; 
             padding: 4px 8px; 
             border-radius: 4px; 
             font-weight: bold; 
             text-transform: uppercase;
-            white-space: nowrap; /* <--- O SEGREDINHO: ISSO IMPEDE A QUEBRA DE LINHA */
+            white-space: nowrap; 
         }
         .log-accept { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .log-reject { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -102,15 +102,18 @@
             <p style="color:#666; font-size: 0.9rem;">Gerenciamento de <b>Usuários</b> e <b>Logs de Acesso</b></p>
         </div>
 
-        <form id="radiusForm" class="admin-form-grid" style="align-items: flex-end; grid-template-columns: 1fr 1fr 1fr 1fr auto;">
+        <form id="radiusForm" class="admin-form-grid" style="align-items: flex-end; grid-template-columns: 1fr 1fr 1fr 1fr auto;" autocomplete="off">
+            
+            <input type="text" style="display:none">
+            <input type="password" style="display:none">
             <div>
                 <label>Usuário</label>
-                <input type="text" id="r_username" placeholder="Ex: cliente.silva" required>
+                <input type="text" id="r_username" placeholder="Ex: cliente.silva" required autocomplete="new-password">
             </div>
             <div>
                 <label>Senha</label>
                 <div class="input-group">
-                    <input type="password" id="r_password" placeholder="Senha" required>
+                    <input type="password" id="r_password" placeholder="Senha" required autocomplete="new-password">
                     <button type="button" onclick="toggleFormPassword()" class="btn-addon" tabindex="-1" title="Mostrar Senha">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 12.332 10.119 13.5 8 13.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
@@ -177,12 +180,9 @@
                     <tr>
                         <th style="width: 160px;">Data/Hora</th>
                         <th style="width: 15%;">Usuário</th>
-                        
                         <th>Indentify da RB</th>
-                        
                         <th style="width: 130px;">IP da RB</th>
                         <th style="width: 130px;">IP de Origem</th>
-                        
                         <th style="width: 140px; text-align:center;">Status</th>
                     </tr>
                 </thead>
@@ -212,9 +212,14 @@
         else {
             document.body.style.display = 'flex';
             criarNavbar('Gestão Radius');
-            carregarListasDropdown(); 
-            carregarRadius();
-            carregarLogs(); 
+            iniciarTela();
+        }
+
+        async function iniciarTela() {
+            // Carrega dropdowns antes de tudo para garantir que a edição funcione
+            await carregarListasDropdown(); 
+            await carregarRadius();
+            carregarLogs();
         }
 
         function toggleFormPassword() {
@@ -244,6 +249,7 @@
                     const selAcesso = document.getElementById('r_acesso');
                     selSetor.innerHTML = '<option value="" disabled selected>Selecione Setor</option>';
                     selAcesso.innerHTML = '<option value="" disabled selected>Selecione Acesso</option>';
+                    
                     dados.setores.forEach(i => selSetor.innerHTML += `<option value="${i.groupname}">${i.groupname}</option>`);
                     dados.acessos.forEach(i => selAcesso.innerHTML += `<option value="${i.groupname}">${i.groupname}</option>`);
                 }
@@ -254,6 +260,7 @@
             try {
                 const res = await fetch('/api/radius/users', { headers: { 'Authorization': `Bearer ${token}` } });
                 const users = await res.json();
+                
                 if(users.error) {
                     document.querySelector('#radiusTable tbody').innerHTML = `<tr><td colspan="5" align="center" style="color:red">Erro: ${users.error}</td></tr>`;
                     return;
@@ -272,7 +279,6 @@
 
             lista.forEach((u, i) => {
                 const passId = `pass_field_${Math.random().toString(36).substr(2, 9)}`;
-                const realIndex = globalUsersList.indexOf(u);
                 const eyeIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 12.332 10.119 13.5 8 13.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg>`;
 
                 tbody.innerHTML += `
@@ -287,13 +293,114 @@
                         <td><span class="tag-badge" style="background:#e8f8f5; color:#27ae60;">${u.setor || '-'}</span></td>
                         <td><span class="tag-badge" style="background:#fef9e7; color:#f1c40f;">${u.acesso || '-'}</span></td>
                         <td>
-                            <button class="action-btn btn-edit" onclick="abrirEdicao(${realIndex})">✏️</button>
-                            <button class="action-btn btn-del" onclick="excluirViaIndex(${realIndex})">🗑️</button>
+                            <button class="action-btn btn-edit" onclick="abrirEdicao('${u.username}')">✏️</button>
+                            <button class="action-btn btn-del" onclick="excluirUsuario('${u.username}')">🗑️</button>
                         </td>
                     </tr>`;
             });
         }
 
+        // Função corrigida para encontrar o usuário e preencher o formulário
+        function abrirEdicao(username) {
+            const user = globalUsersList.find(u => u.username === username);
+            if (!user) return;
+
+            editingUsername = user.username;
+            
+            const userInput = document.getElementById('r_username');
+            userInput.value = user.username;
+            userInput.disabled = true; 
+            
+            const passInput = document.getElementById('r_password');
+            passInput.value = user.password;
+            passInput.type = "text"; // Mostra a senha ao editar
+
+            if(user.setor) document.getElementById('r_setor').value = user.setor;
+            if(user.acesso) document.getElementById('r_acesso').value = user.acesso;
+            
+            document.getElementById('btnText').innerText = "Salvar";
+            document.querySelector('.btn-success').style.background = "#e67e22";
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.getElementById('radiusForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                username: document.getElementById('r_username').value,
+                password: document.getElementById('r_password').value,
+                setor: document.getElementById('r_setor').value,
+                acesso: document.getElementById('r_acesso').value
+            };
+
+            if (!data.setor || !data.acesso) {
+                alert("Por favor, selecione o Setor e o Nível de Acesso.");
+                return;
+            }
+
+            let url = editingUsername 
+                ? `/api/radius/users/${encodeURIComponent(editingUsername)}` 
+                : '/api/radius/users';
+            
+            let method = editingUsername ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) { 
+                    alert(result.message); 
+                    limparForm(); 
+                    carregarRadius(); 
+                } else { 
+                    alert("Erro: " + result.error); 
+                }
+            } catch(error) {
+                alert("Erro de conexão ao salvar.");
+            }
+        });
+
+        async function excluirUsuario(username) {
+            if(!confirm(`Tem certeza que deseja apagar ${username}?`)) return;
+            try {
+                const res = await fetch(`/api/radius/users/${encodeURIComponent(username)}`, { 
+                    method: 'DELETE', 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                });
+                if (res.ok) { 
+                    alert("Removido!"); 
+                    carregarRadius(); 
+                } else { 
+                    const e = await res.json(); 
+                    alert("Erro: " + e.error); 
+                }
+            } catch(e) {
+                alert("Erro ao excluir.");
+            }
+        }
+
+        function limparForm() {
+            editingUsername = null;
+            document.getElementById('radiusForm').reset();
+            const userInput = document.getElementById('r_username');
+            userInput.disabled = false;
+            
+            const passInput = document.getElementById('r_password');
+            passInput.type = "password"; 
+            
+            document.getElementById('btnText').innerText = "Criar";
+            document.querySelector('.btn-success').style.background = "";
+            document.getElementById('r_setor').value = "";
+            document.getElementById('r_acesso').value = "";
+        }
+
+        // Funções de Log
         async function carregarLogs(silencioso = false) {
             try {
                 if (!silencioso && globalLogsList.length === 0) {
@@ -316,33 +423,18 @@
             const tbody = document.querySelector('#logsTable tbody');
             tbody.innerHTML = '';
             if(lista.length === 0) { tbody.innerHTML = `<tr><td colspan="6" align="center">Nenhum log encontrado.</td></tr>`; return; }
-
             lista.forEach(log => {
                 const dataTexto = log.authdate ? new Date(log.authdate).toLocaleString('pt-BR') : '-';
-                
                 let statusClass = 'log-other';
                 if(log.reply && log.reply.toLowerCase().includes('accept')) statusClass = 'log-accept';
                 else if(log.reply && log.reply.toLowerCase().includes('reject')) statusClass = 'log-reject';
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="font-size: 0.85rem; color:#555;">${dataTexto}</td>
-                        <td><strong>${log.username || '-'}</strong></td>
-                        <td><small>${log.nas_identifier || '-'}</small></td>
-                        <td>${log.nas_ip || '-'}</td>
-                        <td>${log.src_ip || '-'}</td>
-                        <td style="text-align:center;"><span class="log-badge ${statusClass}">${log.reply || 'Desconhecido'}</span></td>
-                    </tr>
-                `;
+                tbody.innerHTML += `<tr><td style="font-size: 0.85rem; color:#555;">${dataTexto}</td><td><strong>${log.username || '-'}</strong></td><td><small>${log.nas_identifier || '-'}</small></td><td>${log.nas_ip || '-'}</td><td>${log.src_ip || '-'}</td><td style="text-align:center;"><span class="log-badge ${statusClass}">${log.reply || 'Desconhecido'}</span></td></tr>`;
             });
         }
 
         function filtrarTabela() {
             const termo = document.getElementById('searchInput').value.toLowerCase();
-            const listaFiltrada = globalUsersList.filter(user => 
-                user.username.toLowerCase().includes(termo) ||
-                (user.setor && user.setor.toLowerCase().includes(termo))
-            );
+            const listaFiltrada = globalUsersList.filter(user => user.username.toLowerCase().includes(termo) || (user.setor && user.setor.toLowerCase().includes(termo)));
             renderizarTabela(listaFiltrada);
         }
 
@@ -356,57 +448,6 @@
                 return matchNome || matchData || matchStatus;
             });
             renderizarLogs(listaFiltrada);
-        }
-
-        document.getElementById('radiusForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const data = {
-                username: document.getElementById('r_username').value,
-                password: document.getElementById('r_password').value,
-                setor: document.getElementById('r_setor').value,
-                acesso: document.getElementById('r_acesso').value
-            };
-            let url = editingUsername ? `/api/radius/users/${encodeURIComponent(editingUsername)}` : '/api/radius/users';
-            let method = editingUsername ? 'PUT' : 'POST';
-
-            const res = await fetch(url, {
-                method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data)
-            });
-            const result = await res.json();
-            if (res.ok) { alert(result.message); limparForm(); carregarRadius(); } 
-            else { alert("Erro: " + result.error); }
-        });
-
-        function abrirEdicao(index) {
-            const user = globalUsersList[index];
-            editingUsername = user.username;
-            document.getElementById('r_username').value = user.username;
-            document.getElementById('r_username').disabled = true; 
-            document.getElementById('r_password').value = user.password;
-            document.getElementById('r_password').type = "text"; 
-            if(user.setor) document.getElementById('r_setor').value = user.setor;
-            if(user.acesso) document.getElementById('r_acesso').value = user.acesso;
-            document.getElementById('btnText').innerText = "Salvar";
-            document.querySelector('.btn-success').style.background = "#e67e22";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        async function excluirViaIndex(index) {
-            const user = globalUsersList[index];
-            if(!confirm(`Tem certeza que deseja apagar ${user.username}?`)) return;
-            const res = await fetch(`/api/radius/users/${encodeURIComponent(user.username)}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) { alert("Removido!"); carregarRadius(); } else { const e = await res.json(); alert("Erro: " + e.error); }
-        }
-
-        function limparForm() {
-            editingUsername = null;
-            document.getElementById('radiusForm').reset();
-            document.getElementById('r_username').disabled = false;
-            document.getElementById('r_password').type = "password"; 
-            document.getElementById('btnText').innerText = "Criar";
-            document.querySelector('.btn-success').style.background = "";
-            document.getElementById('r_setor').value = "";
-            document.getElementById('r_acesso').value = "";
         }
     </script>
 </body>

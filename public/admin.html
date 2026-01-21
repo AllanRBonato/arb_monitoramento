@@ -17,6 +17,22 @@
         .action-btn:hover { transform: scale(1.2); }
         .btn-del { color: #e74c3c; } .btn-edit { color: #3498db; }
         .tag-badge { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #ccc; background: white; }
+
+        /* --- MUDANÇA 1: CSS DO BOTÃO OLHO E INPUT GROUP --- */
+        input::-ms-reveal, input::-ms-clear { display: none !important; }
+
+        .input-group { display: flex; align-items: stretch; width: 100%; position: relative; margin-top: 0 !important; }
+        .input-group input {
+            border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;
+            border-right: none !important; flex: 1; margin: 0 !important;
+        }
+        .btn-addon {
+            width: 45px !important; background-color: #fcfcfc; border: 1px solid #bdc3c7;
+            border-left: none; border-top-right-radius: 6px; border-bottom-right-radius: 6px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: #7f8c8d; padding: 0; margin: 0;
+        }
+        .btn-addon:hover { background-color: #ecf0f1; color: #333; }
     </style>
 </head>
 <body>
@@ -59,15 +75,27 @@
             </div>
         </div>
 
-        <form id="createForm" class="admin-form-grid">
+        <form id="createForm" class="admin-form-grid" autocomplete="off">
+            
+            <input type="text" style="display:none">
+            <input type="password" style="display:none">
             <div style="grid-column: span 2;"><h3>👤 Gerenciar Usuário</h3></div>
             <div>
-                <input type="text" id="name" placeholder="Nome Completo" required>
-                <input type="email" id="email" placeholder="E-mail" style="margin-top: 10px;" required>
-                <input type="text" id="phone" placeholder="Telefone" style="margin-top: 10px;" required>
+                <input type="text" id="name" placeholder="Nome Completo" required autocomplete="new-password">
+                <input type="email" id="email" placeholder="E-mail" style="margin-top: 10px;" required autocomplete="new-password">
+                <input type="text" id="phone" placeholder="Telefone" style="margin-top: 10px;" required autocomplete="new-password">
             </div>
             <div>
-                <input type="password" id="password" placeholder="Senha Inicial" required>
+                <div class="input-group">
+                    <input type="password" id="password" placeholder="Senha Inicial" required autocomplete="new-password">
+                    <button type="button" onclick="toggleAdminPassword()" class="btn-addon" tabindex="-1" title="Mostrar Senha">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 12.332 10.119 13.5 8 13.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>
+                        </svg>
+                    </button>
+                </div>
+
                 <select id="role" style="margin-top: 10px;" required><option>Carregando...</option></select>
                 <select id="sector" style="margin-top: 10px;" required><option>Carregando...</option></select>
             </div>
@@ -111,26 +139,24 @@
             await carregarUsuarios();
         }
 
-        // --- FUNÇÃO DE PESQUISA (NOVO) ---
+        // --- MUDANÇA 6: FUNÇÃO TOGGLE PASSWORD ---
+        function toggleAdminPassword() {
+            const input = document.getElementById('password');
+            input.type = input.type === "password" ? "text" : "password";
+        }
+
         function filtrarUsuarios() {
             const input = document.getElementById('searchUser');
             const filter = input.value.toLowerCase();
             const table = document.getElementById('usersTable');
             const tr = table.getElementsByTagName('tr');
-
-            // Começa do 1 para pular o cabeçalho
             for (let i = 1; i < tr.length; i++) {
                 const tds = tr[i].getElementsByTagName('td');
                 let found = false;
-                
-                // Varre todas as colunas da linha (menos a última de ações)
                 for (let j = 0; j < tds.length - 1; j++) {
                     if (tds[j]) {
                         const txtValue = tds[j].textContent || tds[j].innerText;
-                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                            found = true;
-                            break;
-                        }
+                        if (txtValue.toLowerCase().indexOf(filter) > -1) { found = true; break; }
                     }
                 }
                 tr[i].style.display = found ? "" : "none";
@@ -280,8 +306,13 @@
                 document.getElementById('phone').value = user.phone;
                 document.getElementById('role').value = user.role.name;
                 document.getElementById('sector').value = user.sector.name;
+                
+                // --- MUDANÇA 7: LÓGICA DE SENHA NA EDIÇÃO ---
                 const pass = document.getElementById('password');
-                pass.value = ""; pass.placeholder = "Vazio para manter a senha"; pass.required = false;
+                pass.value = ""; 
+                pass.placeholder = "Deixe vazio para manter a senha"; 
+                pass.required = false;
+                
                 editingUserId = user.id;
                 const btn = document.querySelector('#createForm button[type="submit"]');
                 btn.innerText = "Salvar Alterações";
@@ -314,9 +345,11 @@
 
             if (response.ok) {
                 alert(editingUserId ? "Atualizado!" : "Criado!");
+                // --- MUDANÇA 8: RESET COMPLETO DO FORMULÁRIO ---
                 document.getElementById('createForm').reset();
                 document.getElementById('password').placeholder = "Senha Inicial";
                 document.getElementById('password').required = true;
+                
                 editingUserId = null;
                 const btn = document.querySelector('#createForm button[type="submit"]');
                 btn.innerText = "Criar Usuário";

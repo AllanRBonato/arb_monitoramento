@@ -540,35 +540,49 @@ app.post('/api/radius/users', authenticateToken, checkRadiusPermission, async (r
     }
 });
 
-// 4. ATUALIZAR USUÁRIO
+// 4. ATUALIZAR USUÁRIO RADIUS
 app.put('/api/radius/users/:username', authenticateToken, checkRadiusPermission, async (req, res) => {
     const { username } = req.params;
     const { password, setor, acesso } = req.body;
 
+    // Se não veio nada para atualizar, retorna erro
+    if (!password && !setor && !acesso) {
+        return res.status(400).json({ error: "Nenhum dado enviado para atualização." });
+    }
+
     try {
-        // Atualiza Senha na tabela USERS
+        // 1. Atualiza Senha na tabela USERS (se enviada)
+        // Removemos o "AND attribute = ..." para garantir que atualize mesmo se o atributo estiver diferente
         if (password) {
             await dbVM.query(
-                "UPDATE users SET password = $1 WHERE username = $2 AND attribute = 'Cleartext-Password'",
+                "UPDATE users SET password = $1, attribute = 'Cleartext-Password', op = ':=' WHERE username = $2",
                 [password, username]
             );
         }
 
-        // Atualiza Setor e Acesso
-        if (setor || acesso) {
+        // 2. Atualiza Setor e Acesso (Recria as permissões)
+        // Só mexe nisso se vierem dados válidos
+        if (setor && acesso) {
+            // Primeiro limpa os acessos antigos desse usuário
             await dbVM.query("DELETE FROM setor_acesso WHERE username = $1", [username]);
             
-            if(setor) {
-                await dbVM.query("INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 1)", [username, setor]);
-            }
-            if(acesso) {
-                await dbVM.query("INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 2)", [username, acesso]);
-            }
+            // Insere o novo Setor (Prioridade 1)
+            await dbVM.query(
+                "INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 1)", 
+                [username, setor]
+            );
+            
+            // Insere o novo Acesso (Prioridade 2)
+            await dbVM.query(
+                "INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 2)", 
+                [username, acesso]
+            );
         }
 
-        res.json({ message: "Usuário Radius atualizado!" });
+        res.json({ message: "Usuário Radius atualizado com sucesso!" });
+
     } catch (e) {
-        console.error(e);
+        console.error("Erro no PUT Radius:", e);
         res.status(500).json({ error: "Erro ao atualizar na VM: " + e.message });
     }
 });
