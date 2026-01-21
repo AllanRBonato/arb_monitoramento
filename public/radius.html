@@ -1,109 +1,269 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão Radius (VM)</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        body { display: none; }
-        
+        body {
+            display: none;
+        }
+
         /* --- CORREÇÕES VISUAIS --- */
-        input::-ms-reveal, input::-ms-clear { display: none !important; }
+        input::-ms-reveal,
+        input::-ms-clear {
+            display: none !important;
+        }
 
         /* --- ESTILO DO FORMULÁRIO (INPUT GROUP) --- */
-        .input-group { display: flex; align-items: stretch; width: 100%; position: relative; }
+        .input-group {
+            display: flex;
+            align-items: stretch;
+            width: 100%;
+            position: relative;
+        }
+
         .input-group input {
-            border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;
-            border-right: none !important; flex: 1; margin: 0 !important;
+            border-top-right-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+            border-right: none !important;
+            flex: 1;
+            margin: 0 !important;
         }
+
         .btn-addon {
-            width: 45px !important; background-color: #fcfcfc; border: 1px solid #bdc3c7;
-            border-left: none; border-top-right-radius: 6px; border-bottom-right-radius: 6px;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            color: #7f8c8d; padding: 0; margin: 0;
+            width: 45px !important;
+            background-color: #fcfcfc;
+            border: 1px solid #bdc3c7;
+            border-left: none;
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7f8c8d;
+            padding: 0;
+            margin: 0;
         }
-        .btn-addon:hover { background-color: #ecf0f1; color: #333; }
+
+        .btn-addon:hover {
+            background-color: #ecf0f1;
+            color: #333;
+        }
 
         /* --- BARRAS DE PESQUISA --- */
         .search-container {
-            width: 100%; margin-bottom: 15px; margin-top: 25px;
-            border-top: 1px solid #eee; padding-top: 20px;
+            width: 100%;
+            margin-bottom: 15px;
+            margin-top: 25px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
         }
+
         .search-input {
-            width: 100%; padding: 12px 15px; border: 1px solid #bdc3c7; border-radius: 6px;
-            font-size: 1rem; color: #555; background-color: #fcfcfc;
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 1rem;
+            color: #555;
+            background-color: #fcfcfc;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='%23999' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'%3E%3C/path%3E%3C/svg%3E");
-            background-repeat: no-repeat; background-position: 15px center; padding-left: 45px;
+            background-repeat: no-repeat;
+            background-position: 15px center;
+            padding-left: 45px;
             transition: all 0.3s ease;
         }
+
         .search-input:focus {
-            border-color: #3498db; background-color: #fff; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); outline: none;
+            border-color: #3498db;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            outline: none;
         }
 
         /* --- TABELA E SENHA --- */
         .cell-password {
-            display: flex; align-items: center; justify-content: space-between;
-            background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 0 5px; height: 35px; width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0 5px;
+            height: 35px;
+            width: 100%;
         }
+
         .table-input-password {
-            background: transparent !important; border: none !important; box-shadow: none !important;
-            outline: none !important; padding: 0; margin: 0; font-family: monospace; font-size: 1.1rem;
-            color: #000 !important; width: 100% !important; height: 100%; cursor: text; letter-spacing: 2px;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+            padding: 0;
+            margin: 0;
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: #000 !important;
+            width: 100% !important;
+            height: 100%;
+            cursor: text;
+            letter-spacing: 2px;
         }
+
         .btn-eye-table {
-            width: 30px !important; height: 30px !important; background: none !important; border: none !important; 
-            cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; 
-            color: #555; flex-shrink: 0;
+            width: 30px !important;
+            height: 30px !important;
+            background: none !important;
+            border: none !important;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            flex-shrink: 0;
         }
-        .btn-eye-table:hover { color: #000; transform: scale(1.1); }
+
+        .btn-eye-table:hover {
+            color: #000;
+            transform: scale(1.1);
+        }
 
         /* --- ESTILOS PARA LOGS E CONTROLES --- */
         .section-header {
-            margin-top: 40px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #34495e;
-            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #34495e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .log-controls { display: flex; align-items: center; gap: 15px; }
+
+        .log-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .btn-refresh {
-            background: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 4px; 
-            cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; transition: 0.2s; width: auto;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.2s;
+            width: auto;
         }
-        .btn-refresh:hover { background: #2980b9; transform: translateY(-1px); }
-        
-        .toggle-container { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #555; }
-        .toggle-switch { position: relative; width: 34px; height: 20px; }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #27ae60; }
-        input:checked + .slider:before { transform: translateX(14px); }
+
+        .btn-refresh:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 34px;
+            height: 20px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #27ae60;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(14px);
+        }
 
         /* --- CORREÇÃO DOS BADGES --- */
-        .log-badge { 
-            font-size: 0.75rem; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-weight: bold; 
+        .log-badge {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
             text-transform: uppercase;
-            white-space: nowrap; 
+            white-space: nowrap;
         }
-        .log-accept { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .log-reject { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .log-other  { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
 
+        .log-accept {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .log-reject {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .log-other {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border: 1px solid #d6d8db;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="card admin-mode" style="margin-top: 20px; margin-bottom: 50px;">
-        
+
         <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
             <h2>📡 Gestão Radius</h2>
             <p style="color:#666; font-size: 0.9rem;">Gerenciamento de <b>Usuários</b> e <b>Logs de Acesso</b></p>
         </div>
 
-        <form id="radiusForm" class="admin-form-grid" style="align-items: flex-end; grid-template-columns: 1fr 1fr 1fr 1fr auto;" autocomplete="off">
-            
+        <form id="radiusForm" class="admin-form-grid"
+            style="align-items: flex-end; grid-template-columns: 1fr 1fr 1fr 1fr auto;" autocomplete="off">
+
             <input type="text" style="display:none">
             <input type="password" style="display:none">
             <div>
@@ -114,21 +274,28 @@
                 <label>Senha</label>
                 <div class="input-group">
                     <input type="password" id="r_password" placeholder="Senha" required autocomplete="new-password">
-                    <button type="button" onclick="toggleFormPassword()" class="btn-addon" tabindex="-1" title="Mostrar Senha">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 12.332 10.119 13.5 8 13.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>
+                    <button type="button" onclick="toggleFormPassword()" class="btn-addon" tabindex="-1"
+                        title="Mostrar Senha">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                            viewBox="0 0 16 16">
+                            <path
+                                d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 12.332 10.119 13.5 8 13.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
+                            <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z" />
                         </svg>
                     </button>
                 </div>
             </div>
             <div>
                 <label>Setor (Prio. 1)</label>
-                <select id="r_setor" required><option value="" disabled selected>Carregando...</option></select>
+                <select id="r_setor" required>
+                    <option value="" disabled selected>Carregando...</option>
+                </select>
             </div>
             <div>
                 <label>Acesso (Prio. 2)</label>
-                <select id="r_acesso" required><option value="" disabled selected>Carregando...</option></select>
+                <select id="r_acesso" required>
+                    <option value="" disabled selected>Carregando...</option>
+                </select>
             </div>
             <button type="submit" class="btn-success" style="height: 40px; margin-bottom: 0px;">
                 <span id="btnText">Criar</span>
@@ -136,7 +303,8 @@
         </form>
 
         <div class="search-container">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Pesquisar usuário na lista..." onkeyup="filtrarTabela()">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Pesquisar usuário na lista..."
+                onkeyup="filtrarTabela()">
         </div>
 
         <div class="table-responsive" style="max-height: 400px;">
@@ -144,13 +312,17 @@
                 <thead>
                     <tr>
                         <th style="width: 25%;">Usuário</th>
-                        <th style="width: 300px;">Senha</th> 
+                        <th style="width: 300px;">Senha</th>
                         <th style="width: 10%;">Setor (P1)</th>
                         <th style="width: 10%;">Acesso (P2)</th>
                         <th style="width: 100px;">Ações</th>
                     </tr>
                 </thead>
-                <tbody><tr><td colspan="5" align="center">Carregando dados...</td></tr></tbody>
+                <tbody>
+                    <tr>
+                        <td colspan="5" align="center">Carregando dados...</td>
+                    </tr>
+                </tbody>
             </table>
         </div>
 
@@ -171,7 +343,8 @@
         </div>
 
         <div class="search-container" style="margin-top: 10px;">
-            <input type="text" id="searchLogsInput" class="search-input" placeholder="🔍 Pesquisar por nome, data (ex: 20/01), hora ou status..." onkeyup="filtrarLogs()">
+            <input type="text" id="searchLogsInput" class="search-input"
+                placeholder="🔍 Pesquisar por nome, data (ex: 20/01), hora ou status..." onkeyup="filtrarLogs()">
         </div>
 
         <div class="table-responsive" style="max-height: 500px;">
@@ -186,7 +359,11 @@
                         <th style="width: 140px; text-align:center;">Status</th>
                     </tr>
                 </thead>
-                <tbody><tr><td colspan="6" align="center">Aguardando carregamento...</td></tr></tbody>
+                <tbody>
+                    <tr>
+                        <td colspan="6" align="center">Aguardando carregamento...</td>
+                    </tr>
+                </tbody>
             </table>
         </div>
 
@@ -196,13 +373,13 @@
 
     <script>
         const token = localStorage.getItem('token');
-        const myRole = localStorage.getItem('userRole'); 
-        const mySector = localStorage.getItem('userSector'); 
-        
+        const myRole = localStorage.getItem('userRole');
+        const mySector = localStorage.getItem('userSector');
+
         let editingUsername = null;
-        let globalUsersList = []; 
-        let globalLogsList = []; 
-        let autoRefreshInterval = null; 
+        let globalUsersList = [];
+        let globalLogsList = [];
+        let autoRefreshInterval = null;
 
         if (!token) { window.location.href = 'login.html'; }
         else if ((myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') || mySector !== 'SUPORTE_N2') {
@@ -217,7 +394,7 @@
 
         async function iniciarTela() {
             // Carrega dropdowns antes de tudo para garantir que a edição funcione
-            await carregarListasDropdown(); 
+            await carregarListasDropdown();
             await carregarRadius();
             carregarLogs();
         }
@@ -249,7 +426,7 @@
                     const selAcesso = document.getElementById('r_acesso');
                     selSetor.innerHTML = '<option value="" disabled selected>Selecione Setor</option>';
                     selAcesso.innerHTML = '<option value="" disabled selected>Selecione Acesso</option>';
-                    
+
                     dados.setores.forEach(i => selSetor.innerHTML += `<option value="${i.groupname}">${i.groupname}</option>`);
                     dados.acessos.forEach(i => selAcesso.innerHTML += `<option value="${i.groupname}">${i.groupname}</option>`);
                 }
@@ -260,14 +437,14 @@
             try {
                 const res = await fetch('/api/radius/users', { headers: { 'Authorization': `Bearer ${token}` } });
                 const users = await res.json();
-                
-                if(users.error) {
+
+                if (users.error) {
                     document.querySelector('#radiusTable tbody').innerHTML = `<tr><td colspan="5" align="center" style="color:red">Erro: ${users.error}</td></tr>`;
                     return;
                 }
                 globalUsersList = users;
                 renderizarTabela(globalUsersList);
-            } catch(e) { 
+            } catch (e) {
                 document.querySelector('#radiusTable tbody').innerHTML = `<tr><td colspan="5" align="center" style="color:red">Falha na conexão com a VM.</td></tr>`;
             }
         }
@@ -275,7 +452,7 @@
         function renderizarTabela(lista) {
             const tbody = document.querySelector('#radiusTable tbody');
             tbody.innerHTML = '';
-            if(lista.length === 0) { tbody.innerHTML = `<tr><td colspan="5" align="center">Nenhum usuário encontrado.</td></tr>`; return; }
+            if (lista.length === 0) { tbody.innerHTML = `<tr><td colspan="5" align="center">Nenhum usuário encontrado.</td></tr>`; return; }
 
             lista.forEach((u, i) => {
                 const passId = `pass_field_${Math.random().toString(36).substr(2, 9)}`;
@@ -300,49 +477,59 @@
             });
         }
 
-        // Função corrigida para encontrar o usuário e preencher o formulário
+        // --- SUBSTITUA A FUNÇÃO abrirEdicao ---
         function abrirEdicao(username) {
             const user = globalUsersList.find(u => u.username === username);
             if (!user) return;
 
-            editingUsername = user.username;
-            
-            const userInput = document.getElementById('r_username');
-            userInput.value = user.username;
-            userInput.disabled = true; 
-            
-            const passInput = document.getElementById('r_password');
-            passInput.value = user.password;
-            passInput.type = "text"; // Mostra a senha ao editar
+            editingUsername = user.username; // Guarda o nome ANTIGO para saber quem editar
 
-            if(user.setor) document.getElementById('r_setor').value = user.setor;
-            if(user.acesso) document.getElementById('r_acesso').value = user.acesso;
-            
-            document.getElementById('btnText').innerText = "Salvar";
+            const userInput = document.getElementById('r_username');
+            const passInput = document.getElementById('r_password');
+
+            // Preenche e DESTRAVA o campo
+            userInput.value = user.username;
+            userInput.disabled = false; // <--- AQUI ESTAVA O BLOQUEIO, AGORA É FALSE
+
+            passInput.value = user.password;
+            passInput.type = "text";
+
+            if (user.setor) document.getElementById('r_setor').value = user.setor;
+            if (user.acesso) document.getElementById('r_acesso').value = user.acesso;
+
+            document.getElementById('btnText').innerText = "Salvar Alterações";
             document.querySelector('.btn-success').style.background = "#e67e22";
-            
+
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // --- SUBSTITUA O EVENT LISTENER DO FORMULÁRIO ---
         document.getElementById('radiusForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
+            // Pega os valores atuais dos campos
+            const newUsername = document.getElementById('r_username').value;
+            const password = document.getElementById('r_password').value;
+            const setor = document.getElementById('r_setor').value;
+            const acesso = document.getElementById('r_acesso').value;
+
             const data = {
-                username: document.getElementById('r_username').value,
-                password: document.getElementById('r_password').value,
-                setor: document.getElementById('r_setor').value,
-                acesso: document.getElementById('r_acesso').value
+                newUsername: newUsername, // Envia o novo nome digitado
+                password: password,
+                setor: setor,
+                acesso: acesso
             };
 
-            if (!data.setor || !data.acesso) {
-                alert("Por favor, selecione o Setor e o Nível de Acesso.");
-                return;
+            // Se estiver editando, a URL usa o editingUsername (nome ANTIGO)
+            let url = editingUsername
+                ? `/api/radius/users/${encodeURIComponent(editingUsername)}`
+                : '/api/radius/users';
+
+            // Se não estiver editando, o corpo precisa ter 'username' para o CREATE
+            if (!editingUsername) {
+                data.username = newUsername;
             }
 
-            let url = editingUsername 
-                ? `/api/radius/users/${encodeURIComponent(editingUsername)}` 
-                : '/api/radius/users';
-            
             let method = editingUsername ? 'PUT' : 'POST';
 
             try {
@@ -351,36 +538,36 @@
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify(data)
                 });
-                
+
                 const result = await res.json();
-                
-                if (res.ok) { 
-                    alert(result.message); 
-                    limparForm(); 
-                    carregarRadius(); 
-                } else { 
-                    alert("Erro: " + result.error); 
+
+                if (res.ok) {
+                    alert(result.message);
+                    limparForm();
+                    carregarRadius();
+                } else {
+                    alert("Erro: " + result.error);
                 }
-            } catch(error) {
+            } catch (error) {
                 alert("Erro de conexão ao salvar.");
             }
         });
 
         async function excluirUsuario(username) {
-            if(!confirm(`Tem certeza que deseja apagar ${username}?`)) return;
+            if (!confirm(`Tem certeza que deseja apagar ${username}?`)) return;
             try {
-                const res = await fetch(`/api/radius/users/${encodeURIComponent(username)}`, { 
-                    method: 'DELETE', 
-                    headers: { 'Authorization': `Bearer ${token}` } 
+                const res = await fetch(`/api/radius/users/${encodeURIComponent(username)}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (res.ok) { 
-                    alert("Removido!"); 
-                    carregarRadius(); 
-                } else { 
-                    const e = await res.json(); 
-                    alert("Erro: " + e.error); 
+                if (res.ok) {
+                    alert("Removido!");
+                    carregarRadius();
+                } else {
+                    const e = await res.json();
+                    alert("Erro: " + e.error);
                 }
-            } catch(e) {
+            } catch (e) {
                 alert("Erro ao excluir.");
             }
         }
@@ -390,10 +577,10 @@
             document.getElementById('radiusForm').reset();
             const userInput = document.getElementById('r_username');
             userInput.disabled = false;
-            
+
             const passInput = document.getElementById('r_password');
-            passInput.type = "password"; 
-            
+            passInput.type = "password";
+
             document.getElementById('btnText').innerText = "Criar";
             document.querySelector('.btn-success').style.background = "";
             document.getElementById('r_setor').value = "";
@@ -408,26 +595,26 @@
                 }
                 const res = await fetch('/api/radius/logs', { headers: { 'Authorization': `Bearer ${token}` } });
                 const logs = await res.json();
-                if(logs.error) {
-                    if(!silencioso) document.querySelector('#logsTable tbody').innerHTML = `<tr><td colspan="6" align="center" style="color:red">Erro: ${logs.error}</td></tr>`;
+                if (logs.error) {
+                    if (!silencioso) document.querySelector('#logsTable tbody').innerHTML = `<tr><td colspan="6" align="center" style="color:red">Erro: ${logs.error}</td></tr>`;
                     return;
                 }
                 globalLogsList = logs;
                 filtrarLogs();
-            } catch(e) {
-                if(!silencioso) document.querySelector('#logsTable tbody').innerHTML = `<tr><td colspan="6" align="center" style="color:red">Erro na conexão.</td></tr>`;
+            } catch (e) {
+                if (!silencioso) document.querySelector('#logsTable tbody').innerHTML = `<tr><td colspan="6" align="center" style="color:red">Erro na conexão.</td></tr>`;
             }
         }
 
         function renderizarLogs(lista) {
             const tbody = document.querySelector('#logsTable tbody');
             tbody.innerHTML = '';
-            if(lista.length === 0) { tbody.innerHTML = `<tr><td colspan="6" align="center">Nenhum log encontrado.</td></tr>`; return; }
+            if (lista.length === 0) { tbody.innerHTML = `<tr><td colspan="6" align="center">Nenhum log encontrado.</td></tr>`; return; }
             lista.forEach(log => {
                 const dataTexto = log.authdate ? new Date(log.authdate).toLocaleString('pt-BR') : '-';
                 let statusClass = 'log-other';
-                if(log.reply && log.reply.toLowerCase().includes('accept')) statusClass = 'log-accept';
-                else if(log.reply && log.reply.toLowerCase().includes('reject')) statusClass = 'log-reject';
+                if (log.reply && log.reply.toLowerCase().includes('accept')) statusClass = 'log-accept';
+                else if (log.reply && log.reply.toLowerCase().includes('reject')) statusClass = 'log-reject';
                 tbody.innerHTML += `<tr><td style="font-size: 0.85rem; color:#555;">${dataTexto}</td><td><strong>${log.username || '-'}</strong></td><td><small>${log.nas_identifier || '-'}</small></td><td>${log.nas_ip || '-'}</td><td>${log.src_ip || '-'}</td><td style="text-align:center;"><span class="log-badge ${statusClass}">${log.reply || 'Desconhecido'}</span></td></tr>`;
             });
         }
@@ -451,4 +638,5 @@
         }
     </script>
 </body>
+
 </html>
