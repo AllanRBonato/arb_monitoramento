@@ -589,4 +589,22 @@ app.delete('/api/radius/users/:username', authenticateToken, checkRadiusPermissi
     }
 });
 
+// 6. LISTAR LOGS DE ACESSO
+app.get('/api/radius/logs', authenticateToken, checkRadiusPermission, async (req, res) => {
+    try {
+        // Busca os últimos 200 logs (LIMIT 200 para não travar o navegador)
+        const sql = `
+            SELECT username, nas_ip, src_ip, nas_identifier, authdate, reply 
+            FROM logs 
+            ORDER BY authdate DESC 
+            LIMIT 200
+        `;
+        const result = await dbVM.query(sql);
+        res.json(result.rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Erro ao buscar logs." });
+    }
+});
+
 app.listen(3000, () => console.log('Servidor rodando na porta 3000'));
