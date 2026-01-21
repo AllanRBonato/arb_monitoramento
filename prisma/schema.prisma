@@ -66,3 +66,20 @@ model PasswordRequest {
   createdAt DateTime @default(now())
   @@map("password_requests")
 }
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  
+  // Dados de Conexão com a RB
+  rbIp        String
+  rbPort      Int      @default(8728) // Porta padrão da API Mikrotik
+  rbUser      String
+  rbPassword  String
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
+}

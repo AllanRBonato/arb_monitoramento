@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const dbVM = require('./db-vm');
+const ping = require('ping'); // Importe o ping
 
 const prisma = new PrismaClient();
 const app = express(); 
@@ -619,6 +620,78 @@ app.get('/api/radius/logs', authenticateToken, checkRadiusPermission, async (req
         console.error(e);
         res.status(500).json({ error: "Erro ao buscar logs." });
     }
+});
+
+
+// ================= GESTÃO DE PROJETOS =================
+
+// Middleware extra para garantir que só N2 (ou Master) acesse
+const checkN2Access = (req, res, next) => {
+    // Se for ADMIN_MASTER libera, se for do setor SUPORTE_N2 libera. O resto bloqueia.
+    if (req.user.role === 'ADMIN_MASTER' || req.user.sector === 'SUPORTE_N2') {
+        next();
+    } else {
+        return res.status(403).json({ error: "Acesso restrito ao setor SUPORTE_N2." });
+    }
+};
+
+// 1. LISTAR PROJETOS (Apenas N2 vê)
+app.get('/api/projects', authenticateToken, checkN2Access, async (req, res) => {
+    try {
+        const projects = await prisma.project.findMany({ orderBy: { createdAt: 'desc' } });
+        const safeProjects = projects.map(p => ({ ...p, rbPassword: undefined }));
+        res.json(safeProjects);
+    } catch (e) { res.status(500).json({ error: "Erro ao listar projetos" }); }
+});
+
+// 2. CRIAR PROJETO (Apenas N2 E Nível >= 50)
+app.post('/api/projects', authenticateToken, checkN2Access, async (req, res) => {
+    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão para criar projetos." });
+
+    const { name, description, rbIp, rbUser, rbPassword, rbPort } = req.body;
+    if (!name || !rbIp || !rbUser) return res.status(400).json({ error: "Dados incompletos." });
+
+    try {
+        const project = await prisma.project.create({
+            data: { name, description, rbIp, rbUser, rbPassword, rbPort: parseInt(rbPort) || 8728 }
+        });
+        res.json(project);
+    } catch (e) { res.status(500).json({ error: "Erro ao criar projeto" }); }
+});
+
+// 3. ATUALIZAR PROJETO (Apenas N2 E Nível >= 50)
+app.put('/api/projects/:id', authenticateToken, checkN2Access, async (req, res) => {
+    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão para editar." });
+
+    const { id } = req.params;
+    const { name, rbIp, rbUser, rbPort, rbPassword } = req.body;
+    
+    try {
+        const data = { name, rbIp, rbUser, rbPort: parseInt(rbPort) };
+        if (rbPassword && rbPassword.trim() !== "") data.rbPassword = rbPassword;
+
+        await prisma.project.update({ where: { id }, data: data });
+        res.json({ message: "Projeto atualizado!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao atualizar." }); }
+});
+
+// 4. EXCLUIR PROJETO (Apenas N2 E Nível >= 50)
+app.delete('/api/projects/:id', authenticateToken, checkN2Access, async (req, res) => {
+    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão para excluir." });
+
+    try {
+        await prisma.project.delete({ where: { id: req.params.id } });
+        res.json({ message: "Projeto deletado" });
+    } catch (e) { res.status(500).json({ error: "Erro ao deletar" }); }
+});
+
+// 5. STATUS (Apenas N2 pode checar status)
+app.post('/api/projects/status', authenticateToken, checkN2Access, async (req, res) => {
+    const { ip } = req.body;
+    try {
+        const result = await ping.promise.probe(ip, { timeout: 2 });
+        res.json({ online: result.alive, ms: result.time });
+    } catch (e) { res.json({ online: false, error: e.message }); }
 });
 
 app.listen(3000, () => console.log('Servidor rodando na porta 3000'));
