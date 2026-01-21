@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
-const { authenticateToken } = require('../middlewares/auth'); // Importa o middleware
+const { authenticateToken } = require('../middlewares/auth'); 
 
 const prisma = new PrismaClient();
 const SECRET_KEY = process.env.JWT_SECRET;
@@ -49,8 +49,10 @@ router.post('/forgot-password', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro no servidor" }); }
 });
 
+// --- CORREÇÃO AQUI EMBAIXO (Adicionado /admin no caminho) ---
+
 // LISTAR SOLICITAÇÕES (Admin/Full)
-router.get('/password-requests', authenticateToken, async (req, res) => {
+router.get('/admin/password-requests', authenticateToken, async (req, res) => {
     if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão" });
 
     try {
@@ -68,7 +70,7 @@ router.get('/password-requests', authenticateToken, async (req, res) => {
 });
 
 // RESOLVER SOLICITAÇÃO
-router.delete('/password-requests/:id', authenticateToken, async (req, res) => {
+router.delete('/admin/password-requests/:id', authenticateToken, async (req, res) => {
     if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão" });
     try {
         await prisma.passwordRequest.delete({ where: { id: req.params.id } });
