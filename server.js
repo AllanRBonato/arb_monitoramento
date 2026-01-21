@@ -26,8 +26,7 @@ app.use('/api', authRoutes);
 // Gestão de Usuários
 app.use('/api/users', userRoutes);
 
-// Configurações (Cargos e Setores - CORREÇÃO DO ERRO)
-// O frontend chama /api/roles e /api/sectors, então montamos no /api
+// Configurações 
 app.use('/api', settingsRoutes);
 
 // Notas Pessoais

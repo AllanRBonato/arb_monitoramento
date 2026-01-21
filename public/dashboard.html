@@ -154,6 +154,10 @@
             }
 
             carregarProjetos();
+
+            setInterval(() => {
+                carregarProjetos();
+            }, 10000);
         }
 
         function togglePass() {
