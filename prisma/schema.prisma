@@ -71,15 +71,33 @@ model Project {
   id          String   @id @default(uuid())
   name        String
   description String?
-  
-  // Dados de Conexão com a RB
+  excelLink   String?  
+
   rbIp        String
-  rbPort      Int      @default(8728) // Porta padrão da API Mikrotik
+  rbPort      Int      @default(8728) // Porta API (Interna)
+  rbWinboxPort Int     @default(8291) // Porta Winbox (Visual)
   rbUser      String
   rbPassword  String
-  
+
+  providers   Provider[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("projects")
+}
+
+// (O model Provider já aceita contact String?, então está ok)
+
+// NOVA TABELA: Provedoras (Vivo, Claro, Oi, etc)
+model Provider {
+  id        String  @id @default(uuid())
+  name      String  // Nome (ex: Vivo)
+  vlan      String? // VLAN (ex: 100)
+  contact   String? // Contato (ex: 0800...)
+  
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("providers")
 }
