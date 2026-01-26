@@ -20,11 +20,14 @@ app.use(express.static('public'));
 
 // --- DEFINIÇÃO DAS ROTAS ---
 
+// Isso torna a pasta 'uploads' pública para acessar as fotos
+app.use('/uploads', express.static('uploads'));
+
 // Autenticação (Login)
 app.use('/api', authRoutes);
 
 // Gestão de Usuários
-app.use('/api/users', userRoutes);
+app.use('/api/user', userRoutes);
 
 // Configurações 
 app.use('/api', settingsRoutes);

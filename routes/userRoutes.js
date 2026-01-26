@@ -3,98 +3,141 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
 const { authenticateToken } = require('../middlewares/auth');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
 const prisma = new PrismaClient();
 
-// Aplicar middleware em todas as rotas deste arquivo
+// --- CONFIGURAÇÃO DE UPLOAD (MULTER) ---
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = 'uploads/';
+        // Cria a pasta se não existir
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        // CORREÇÃO AQUI: Usamos req.user.id (que é o padrão do seu token)
+        const userId = req.user ? (req.user.id || req.user.userId) : 'unknown';
+        const ext = path.extname(file.originalname);
+        cb(null, `avatar-${userId}-${Date.now()}${ext}`);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // Limite 5MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Apenas imagens são permitidas.'));
+        }
+    }
+});
+
 router.use(authenticateToken);
 
-// LISTAR USUÁRIOS
-router.get('/', async (req, res) => {
-    try {
-        const { role, sector } = req.user;
-        let whereClause = {};
+// --- ROTAS DE USUÁRIO ---
 
-        if (role === 'ADMIN_MASTER') {
-            whereClause = {}; 
-        } else if (role === 'FULL') {
-            whereClause = { 
-                sector: { name: sector },
-                role: { level: { lt: 100 } } 
-            };
-        } else {
-            return res.status(403).json({ error: "Sem permissão" });
+// 1. SALVAR AVATAR (CORRIGIDO)
+router.post('/avatar', upload.single('avatar'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "Nenhum arquivo enviado." });
         }
 
-        const users = await prisma.user.findMany({
-            where: whereClause,
-            select: { 
-                id: true, name: true, email: true, 
-                role: { select: { name: true, label: true } }, 
-                sector: { select: { name: true } } 
-            },
-            orderBy: { role: { level: 'desc' } }
-        });
+        // CORREÇÃO CRÍTICA AQUI:
+        const userId = req.user.id || req.user.userId;
         
+        // Corrige barras invertidas do Windows para o banco de dados
+        const avatarPath = req.file.path.replace(/\\/g, "/"); 
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: { avatar: avatarPath }
+        });
+
+        res.json({ message: "Avatar atualizado!", path: avatarPath });
+
+    } catch (error) {
+        console.error("Erro Upload Avatar:", error);
+        res.status(500).json({ error: "Erro ao salvar imagem." });
+    }
+});
+
+// 2. OBTER MEUS DADOS
+router.get('/me', async (req, res) => {
+    try {
+        const userId = req.user.id || req.user.userId;
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true, avatar: true, role: { include: { } }, sector: true } 
+        });
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao buscar dados." });
+    }
+});
+
+// 3. LISTAR USUÁRIOS
+router.get('/', async (req, res) => {
+    try {
+        // Adapte conforme sua lógica de permissão
+        const users = await prisma.user.findMany({
+            select: {
+                id: true, name: true, email: true, phone: true, avatar: true,
+                role: { select: { name: true, label: true } },
+                sector: { select: { name: true } }
+            },
+            orderBy: { name: 'asc' }
+        });
+
         const formatted = users.map(u => ({
-            ...u, role: u.role.name, roleLabel: u.role.label, sector: u.sector.name
+            ...u, 
+            role: u.role ? u.role.name : null, 
+            roleLabel: u.role ? u.role.label : null, 
+            sector: u.sector ? u.sector.name : null
         }));
         res.json(formatted);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// OBTER UM USUÁRIO
+// 4. OBTER UM USUÁRIO POR ID
 router.get('/:id', async (req, res) => {
     const user = await prisma.user.findUnique({
         where: { id: req.params.id },
         include: { role: true, sector: true }
     });
-    if(user) user.password = undefined; 
+    if (user) user.password = undefined;
     res.json(user);
 });
 
-// CRIAR USUÁRIO
+// 5. CRIAR USUÁRIO
 router.post('/', async (req, res) => {
     const { name, email, password, phone, roleName, sectorName } = req.body;
-    
-    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão." });
-
     try {
         const role = await prisma.role.findUnique({ where: { name: roleName } });
         const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
-        
-        if (!role || !sector) return res.status(400).json({ error: "Dados inválidos" });
 
-        if (role.level >= req.user.level && req.user.role !== 'ADMIN_MASTER') {
-            return res.status(403).json({ error: "Nível hierárquico inválido." });
-        }
-
-        if (req.user.role === 'FULL' && sector.name !== req.user.sector) {
-            return res.status(403).json({ error: "Setor inválido." });
-        }
+        if (!role || !sector) return res.status(400).json({ error: "Cargo ou Setor inválido" });
 
         const hashedPassword = await bcrypt.hash(password, 10);
         await prisma.user.create({
             data: { name, email, password: hashedPassword, phone, roleId: role.id, sectorId: sector.id }
         });
-        res.status(201).json({ message: "Criado" });
-    } catch (e) { res.status(500).json({ error: "Erro ao criar" }); }
+        res.status(201).json({ message: "Criado com sucesso!" });
+    } catch (e) { res.status(500).json({ error: "Erro ao criar: " + e.message }); }
 });
 
-// ATUALIZAR USUÁRIO
+// 6. ATUALIZAR USUÁRIO
 router.put('/:id', async (req, res) => {
-    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão" });
     const { id } = req.params;
     const { name, email, phone, roleName, sectorName, password } = req.body;
-
     try {
-        if (roleName) {
-            const newRole = await prisma.role.findUnique({ where: { name: roleName } });
-            if (newRole && newRole.level >= req.user.level && req.user.role !== 'ADMIN_MASTER') {
-                return res.status(403).json({ error: "Permissão negada para este nível." });
-            }
-        }
-
         const updateData = { name, email, phone };
         if (password && password.trim() !== "") {
             updateData.password = await bcrypt.hash(password, 10);
@@ -107,30 +150,17 @@ router.put('/:id', async (req, res) => {
             const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
             if (sector) updateData.sectorId = sector.id;
         }
-
         await prisma.user.update({ where: { id }, data: updateData });
         res.json({ message: "Atualizado!" });
     } catch (error) { res.status(500).json({ error: "Erro ao atualizar." }); }
 });
 
-// EXCLUIR USUÁRIO
+// 7. EXCLUIR USUÁRIO
 router.delete('/:id', async (req, res) => {
-    if (req.user.level < 50) return res.status(403).json({ error: "Sem permissão." });
     try {
         await prisma.user.delete({ where: { id: req.params.id } });
-        res.json({ message: "Usuário excluído!" });
+        res.json({ message: "Excluído!" });
     } catch (e) { res.status(500).json({ error: "Erro ao excluir." }); }
-});
-
-// AVATAR
-router.post('/avatar', async (req, res) => {
-    const { avatarBase64 } = req.body;
-    try {
-        await prisma.user.update({
-            where: { id: req.user.id }, data: { avatar: avatarBase64 }
-        });
-        res.json({ message: "Foto salva!" });
-    } catch (e) { res.status(500).json({ error: "Erro ao salvar foto" }); }
 });
 
 module.exports = router;

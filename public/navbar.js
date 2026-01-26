@@ -1,4 +1,13 @@
-// --- SEGURANÇA: PREVENIR BOTÃO VOLTAR ---
+(function() {
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+    }
+    link.href = './favicon/favicon.ico'; 
+})();
+
 window.addEventListener('pageshow', function (event) {
     if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
         window.location.reload();
@@ -8,18 +17,20 @@ window.addEventListener('pageshow', function (event) {
 function criarNavbar(nomePagina) {
     const token = localStorage.getItem('token');
 
-    // --- VERIFICAÇÃO RIGOROSA ---
     if (!token) {
-        // Se não tem token, a página continua invisível e redireciona
         window.location.href = 'login.html';
         return;
     }
 
-    // SE CHEGOU AQUI, TEM TOKEN. ENTÃO MOSTRA A PÁGINA:
-    document.body.style.display = 'flex'; // <--- A MÁGICA ACONTECE AQUI
+    document.body.style.display = 'flex';
 
-    const savedAvatar = localStorage.getItem('userAvatar');
+    let savedAvatar = localStorage.getItem('userAvatar');
     const userRole = localStorage.getItem('userRole');
+
+    // Correção: Se a imagem não for link completo (ex: uploads/...), adiciona a barra
+    if (savedAvatar && !savedAvatar.startsWith('http') && !savedAvatar.startsWith('/')) {
+        savedAvatar = '/' + savedAvatar;
+    }
 
     const avatarSrc = (savedAvatar && savedAvatar !== "null")
         ? savedAvatar
@@ -57,33 +68,22 @@ function criarNavbar(nomePagina) {
     document.body.insertAdjacentHTML('afterbegin', navHTML);
 }
 
-// LÓGICA DOS LINKS DO MENU
 function gerarLinksNavegacao(role, paginaAtual) {
     let links = '';
-    
-    // Precisamos pegar o setor salvo no login
     const userSector = localStorage.getItem('userSector');
 
-    // 1. Link para Notas
     if (paginaAtual !== 'Minhas Notas') {
         links += `<a href="menu.html" class="dropdown-item">📝 Minhas Notas</a>`;
     }
 
-    // 2. Link para Admin (Chefes em geral)
     if ((role === 'ADMIN_MASTER' || role === 'FULL') && paginaAtual !== 'Gestão de Usuários') {
         links += `<a href="admin.html" class="dropdown-item">👥 Gestão de Usuários</a>`;
     }
 
-    // 3. Link para Radius (SÓ PARA SUPORTE_N2 COM CARGO ALTO)
-    if (
-        (role === 'ADMIN_MASTER' || role === 'FULL') && 
-        userSector === 'SUPORTE_N2' && 
-        paginaAtual !== 'Gestão Radius'
-    ) {
+    if ((role === 'ADMIN_MASTER' || role === 'FULL') && userSector === 'SUPORTE_N2' && paginaAtual !== 'Gestão Radius') {
         links += `<a href="radius.html" class="dropdown-item">📡 Gestão Radius (VM)</a>`;
     }
 
-    // 4. Link para Dashboard
     if (paginaAtual !== 'Dashboard') {
         links += `<a href="dashboard.html" class="dropdown-item">📊 Dashboard Geral</a>`;
     }
@@ -114,31 +114,43 @@ function triggerFile(e) {
     document.getElementById('fileInput').click();
 }
 
+// --- FUNÇÃO DE UPLOAD CORRIGIDA PARA ENVIAR ARQUIVO REAL ---
 async function uploadFoto(input) {
     const file = input.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async function () {
-        const base64String = reader.result;
-        try {
-            const response = await fetch('/api/user/avatar', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({ avatarBase64: base64String })
-            });
+    // Prepara o formulário de dados (Multipart)
+    const formData = new FormData();
+    formData.append('avatar', file); // 'avatar' deve bater com o backend
 
-            if (response.ok) {
-                document.getElementById('userAvatarDisplay').src = base64String;
-                localStorage.setItem('userAvatar', base64String);
-                alert("Foto atualizada!");
-            } else {
-                alert("Erro ao salvar foto.");
-            }
-        } catch (e) { console.error(e); }
-    };
+    try {
+        const response = await fetch('/api/user/avatar', {
+            method: 'POST',
+            headers: {
+                // NÃO definir Content-Type aqui (o browser define multipart/form-data sozinho)
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Corrige o caminho para exibição
+            const newPath = '/' + data.path.replace(/\\/g, '/');
+            
+            document.getElementById('userAvatarDisplay').src = newPath;
+            localStorage.setItem('userAvatar', newPath); // Salva o caminho do arquivo, não base64
+            
+            alert("Foto atualizada com sucesso!");
+            // Opcional: Recarregar para garantir que apareça em tudo
+            // location.reload(); 
+        } else {
+            const err = await response.json();
+            alert("Erro: " + (err.error || "Falha ao salvar foto."));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Erro de conexão ao enviar foto.");
+    }
 }
