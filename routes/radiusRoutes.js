@@ -5,10 +5,10 @@ const dbVM = require('../db-vm');
 
 router.use(authenticateToken);
 
-// Middleware de Permissão (Corrigido para OU)
+// Middleware de Permissão - Meu pau na sua mão
 const checkRadiusPermission = (req, res, next) => {
     const { role, sector } = req.user;
-    // Admin Master acessa OU (Full acessa SE for do setor N2)
+    // Admin Master acessa OU (Full acessa SE for do setor N2) - Resto rapa
     if (role === 'ADMIN_MASTER' || (role === 'FULL' && sector === 'SUPORTE_N2')) {
         next();
     } else {
@@ -59,21 +59,18 @@ router.post('/users', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro VM: " + e.message }); }
 });
 
-// ATUALIZAR (CORRIGIDO PARA MUDAR NOME)
+// ATUALIZAR
 router.put('/users/:username', async (req, res) => {
-    const { username } = req.params; // Nome ANTIGO (que está na URL)
-    const { newUsername, password, setor, acesso } = req.body; // Dados NOVOS
+    const { username } = req.params;
+    const { newUsername, password, setor, acesso } = req.body;
 
     try {
-        // 1. Se mudou o nome de usuário, atualiza primeiro o nome nas duas tabelas
         let targetUser = username;
         if (newUsername && newUsername !== username) {
-            // Atualiza tabela users
             await dbVM.query("UPDATE users SET username = $1 WHERE username = $2", [newUsername, username]);
-            // Atualiza tabela setor_acesso
             await dbVM.query("UPDATE setor_acesso SET username = $1 WHERE username = $2", [newUsername, username]);
             
-            targetUser = newUsername; // O alvo agora é o novo nome para as próximas updates
+            targetUser = newUsername;
         }
 
         // 2. Atualiza a Senha
@@ -81,7 +78,7 @@ router.put('/users/:username', async (req, res) => {
             await dbVM.query("UPDATE users SET password = $1, attribute = 'Cleartext-Password', op = ':=' WHERE username = $2", [password, targetUser]);
         }
 
-        // 3. Atualiza Setor e Acesso (Remove e Recria)
+        // 3. Atualiza Setor e Acesso
         if (setor && acesso) {
             await dbVM.query("DELETE FROM setor_acesso WHERE username = $1", [targetUser]);
             await dbVM.query("INSERT INTO setor_acesso (username, groupname, priority) VALUES ($1, $2, 1)", [targetUser, setor]);

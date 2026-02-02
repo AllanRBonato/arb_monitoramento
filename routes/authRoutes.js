@@ -31,7 +31,7 @@ router.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro servidor" }); }
 });
 
-// SOLICITAR RESET DE SENHA (Público)
+// SOLICITAR RESET DE SENHA
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
     try {
@@ -48,8 +48,6 @@ router.post('/forgot-password', async (req, res) => {
         res.json({ message: "Solicitação enviada! Avise seu supervisor." });
     } catch (e) { res.status(500).json({ error: "Erro no servidor" }); }
 });
-
-// --- CORREÇÃO AQUI EMBAIXO (Adicionado /admin no caminho) ---
 
 // LISTAR SOLICITAÇÕES (Admin/Full)
 router.get('/admin/password-requests', authenticateToken, async (req, res) => {

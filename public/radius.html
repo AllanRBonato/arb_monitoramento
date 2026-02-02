@@ -11,13 +11,11 @@
             display: none;
         }
 
-        /* --- CORREÇÕES VISUAIS --- */
         input::-ms-reveal,
         input::-ms-clear {
             display: none !important;
         }
 
-        /* --- ESTILO DO FORMULÁRIO (INPUT GROUP) --- */
         .input-group {
             display: flex;
             align-items: stretch;
@@ -54,7 +52,6 @@
             color: #333;
         }
 
-        /* --- BARRAS DE PESQUISA --- */
         .search-container {
             width: 100%;
             margin-bottom: 15px;
@@ -85,7 +82,6 @@
             outline: none;
         }
 
-        /* --- TABELA E SENHA --- */
         .cell-password {
             display: flex;
             align-items: center;
@@ -133,7 +129,6 @@
             transform: scale(1.1);
         }
 
-        /* --- ESTILOS PARA LOGS E CONTROLES --- */
         .section-header {
             margin-top: 40px;
             margin-bottom: 15px;
@@ -222,7 +217,6 @@
             transform: translateX(14px);
         }
 
-        /* --- CORREÇÃO DOS BADGES --- */
         .log-badge {
             font-size: 0.75rem;
             padding: 4px 8px;
@@ -393,7 +387,6 @@
         }
 
         async function iniciarTela() {
-            // Carrega dropdowns antes de tudo para garantir que a edição funcione
             await carregarListasDropdown();
             await carregarRadius();
             carregarLogs();
@@ -477,19 +470,17 @@
             });
         }
 
-        // --- SUBSTITUA A FUNÇÃO abrirEdicao ---
         function abrirEdicao(username) {
             const user = globalUsersList.find(u => u.username === username);
             if (!user) return;
 
-            editingUsername = user.username; // Guarda o nome ANTIGO para saber quem editar
+            editingUsername = user.username;
 
             const userInput = document.getElementById('r_username');
             const passInput = document.getElementById('r_password');
 
-            // Preenche e DESTRAVA o campo
             userInput.value = user.username;
-            userInput.disabled = false; // <--- AQUI ESTAVA O BLOQUEIO, AGORA É FALSE
+            userInput.disabled = false;
 
             passInput.value = user.password;
             passInput.type = "text";
@@ -503,29 +494,25 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // --- SUBSTITUA O EVENT LISTENER DO FORMULÁRIO ---
         document.getElementById('radiusForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // Pega os valores atuais dos campos
             const newUsername = document.getElementById('r_username').value;
             const password = document.getElementById('r_password').value;
             const setor = document.getElementById('r_setor').value;
             const acesso = document.getElementById('r_acesso').value;
 
             const data = {
-                newUsername: newUsername, // Envia o novo nome digitado
+                newUsername: newUsername,
                 password: password,
                 setor: setor,
                 acesso: acesso
             };
 
-            // Se estiver editando, a URL usa o editingUsername (nome ANTIGO)
             let url = editingUsername
                 ? `/api/radius/users/${encodeURIComponent(editingUsername)}`
                 : '/api/radius/users';
 
-            // Se não estiver editando, o corpo precisa ter 'username' para o CREATE
             if (!editingUsername) {
                 data.username = newUsername;
             }

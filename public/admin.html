@@ -9,12 +9,10 @@
     <style>
         body {
             display: none;
-            /* Esconde o corpo até carregar o script */
         }
 
         .admin-controls {
             display: none;
-            /* Esconde controles administrativos por padrão */
             grid-template-columns: 1fr 1fr;
             gap: 20px;
             margin-bottom: 30px;
@@ -106,7 +104,6 @@
             margin-left: 5px;
         }
 
-        /* Estilos de input e botão de senha */
         input::-ms-reveal,
         input::-ms-clear {
             display: none !important;
@@ -264,7 +261,6 @@
         const token = localStorage.getItem('token');
         const myRole = localStorage.getItem('userRole');
 
-        // Redireciona se não houver token
         if (!token) { window.location.href = 'login.html'; }
         else {
             document.body.style.display = 'flex';
@@ -272,7 +268,6 @@
             iniciarPagina();
         }
 
-        // Função principal de inicialização
         async function iniciarPagina() {
             if (myRole === 'ADMIN_MASTER') {
                 document.getElementById('masterControls').style.display = 'grid';
@@ -289,7 +284,6 @@
             input.type = input.type === "password" ? "text" : "password";
         }
 
-        // Filtro de tabela
         function filtrarUsuarios() {
             const input = document.getElementById('searchUser');
             const filter = input.value.toLowerCase();
@@ -308,7 +302,6 @@
             }
         }
 
-        // Carrega lista de usuários
         async function carregarUsuarios() {
             try {
                 const res = await fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -326,8 +319,7 @@
                     const cargo = rawRole.toUpperCase();
                     const label = u.roleLabel || '';
 
-                    // Lógica de cores baseada no cargo
-                    let badgeBg = '#ecf0f1'; // Padrão
+                    let badgeBg = '#ecf0f1';
                     let badgeColor = '#2c3e50';
 
                     if (cargo === 'ADMIN_MASTER') {
@@ -367,7 +359,6 @@
             }
         }
 
-        // Funções de pedidos de senha
         async function checarPedidosSenha() {
             if (myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') return;
             const res = await fetch('/api/admin/password-requests', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -400,7 +391,6 @@
             }
         }
 
-        // Funções de gestão de setores
         async function atualizarListaSetores() {
             try {
                 const res = await fetch('/api/sectors', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -453,7 +443,6 @@
             if (res.ok) atualizarListaSetores(); else alert("Erro ao excluir");
         }
 
-        // Funções de gestão de cargos
         async function atualizarListaCargos() {
             try {
                 const res = await fetch('/api/roles', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -511,7 +500,6 @@
             if (res.ok) atualizarListaCargos(); else alert("Erro ao excluir");
         }
 
-        // Dropdowns e formulário de usuário
         async function carregarOpcoesDropdown() {
             try {
                 const roleSelect = document.getElementById('role');

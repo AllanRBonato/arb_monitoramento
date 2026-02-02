@@ -10,7 +10,7 @@ const MikrotikClient = nodeRouterOsLib.RouterOSAPI || nodeRouterOsLib.RouterOSCl
 const prisma = new PrismaClient();
 router.use(authenticateToken);
 
-// --- ROTAS CRUD (Padrão) ---
+// --- ROTAS CRUD ---
 router.get('/', async (req, res) => {
     try { const projects = await prisma.project.findMany({ include: { providers: true } }); res.json(projects); } 
     catch (error) { res.status(500).json({ error: "Erro ao buscar" }); }
@@ -53,7 +53,7 @@ router.post('/status', async (req, res) => {
     catch (error) { res.json({ online: false, ms: 0 }); }
 });
 
-// --- ROTA DE STATUS CORRIGIDA (DEBUG + SEM FILTROS) ---
+// --- ROTA DE STATUS ---
 router.post('/:id/check-group', async (req, res) => {
     const { id } = req.params;
     const { ips } = req.body;
@@ -74,24 +74,19 @@ router.post('/:id/check-group', async (req, res) => {
         api.on('error', (err) => console.log("⚠️ Erro Socket:", err.message));
         await api.connect();
 
-        // 1. BAIXA ARP SEM FILTROS
-        // console.log(`📡 Baixando ARP de ${project.rbIp}...`);
+        // 1. BAIXA ARP
         const arpTable = await api.write('/ip/arp/print');
         
-        // Mapa IP -> MAC (Imprime no terminal para conferência)
+        // Mapa IP -> MAC
         const arpMap = {};
         if (Array.isArray(arpTable)) {
             arpTable.forEach(entry => {
-                // Pega qualquer entrada que tenha IP e MAC
                 if (entry.address && entry['mac-address']) {
                     const cleanIp = entry.address.trim();
                     arpMap[cleanIp] = entry['mac-address'];
                 }
             });
         }
-        
-        // LOG DEBUG: Verifica se o IP problemático está no mapa
-        // console.log("ARP Cache contém 192.168.1.110?", arpMap['192.168.1.110'] ? "SIM" : "NÃO");
 
         // 2. PROCESSA IPs
         for (const ip of ips) {
@@ -103,7 +98,6 @@ router.post('/:id/check-group', async (req, res) => {
                 results[ip] = { online: true, ms: "via ARP", mac: macEncontrado, status: "Conectado" };
             } else {
                 // NÃO ACHOU -> PING
-                // console.log(`🔍 Pingando ${ipClean}...`);
                 try {
                     const pingCommand = api.write('/ping', { 
                         'address': ipClean, 
@@ -121,7 +115,7 @@ router.post('/:id/check-group', async (req, res) => {
                     let latency = '0ms';
                     
                     if (Array.isArray(pingRes)) {
-                        // Verifica qualquer sinal de vida
+                        // Verifica qualquer sinal de vida kkkkkk
                         const p = pingRes[0];
                         if (p && ((p.received && p.received > 0) || (p.time))) {
                             isOnline = true;
@@ -147,7 +141,7 @@ router.post('/:id/check-group', async (req, res) => {
 
     } catch (e) {
         if(api) try{api.close()}catch(x){};
-        // Retorna erro mas não quebra o front
+        // Retorna erro mas não quebra o front - poha!!!
         const failResults = {};
         ips.forEach(ip => failResults[ip] = { online: false, ms: 0, status: "Erro Conexão" });
         res.json(failResults);

@@ -27,7 +27,6 @@ function criarNavbar(nomePagina) {
     let savedAvatar = localStorage.getItem('userAvatar');
     const userRole = localStorage.getItem('userRole');
 
-    // Correção: Se a imagem não for link completo (ex: uploads/...), adiciona a barra
     if (savedAvatar && !savedAvatar.startsWith('http') && !savedAvatar.startsWith('/')) {
         savedAvatar = '/' + savedAvatar;
     }
@@ -114,20 +113,18 @@ function triggerFile(e) {
     document.getElementById('fileInput').click();
 }
 
-// --- FUNÇÃO DE UPLOAD CORRIGIDA PARA ENVIAR ARQUIVO REAL ---
 async function uploadFoto(input) {
     const file = input.files[0];
     if (!file) return;
 
-    // Prepara o formulário de dados (Multipart)
+
     const formData = new FormData();
-    formData.append('avatar', file); // 'avatar' deve bater com o backend
+    formData.append('avatar', file);
 
     try {
         const response = await fetch('/api/user/avatar', {
             method: 'POST',
             headers: {
-                // NÃO definir Content-Type aqui (o browser define multipart/form-data sozinho)
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: formData
@@ -136,15 +133,12 @@ async function uploadFoto(input) {
         if (response.ok) {
             const data = await response.json();
             
-            // Corrige o caminho para exibição
             const newPath = '/' + data.path.replace(/\\/g, '/');
             
             document.getElementById('userAvatarDisplay').src = newPath;
-            localStorage.setItem('userAvatar', newPath); // Salva o caminho do arquivo, não base64
+            localStorage.setItem('userAvatar', newPath);
             
             alert("Foto atualizada com sucesso!");
-            // Opcional: Recarregar para garantir que apareça em tudo
-            // location.reload(); 
         } else {
             const err = await response.json();
             alert("Erro: " + (err.error || "Falha ao salvar foto."));

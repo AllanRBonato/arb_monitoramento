@@ -5,11 +5,10 @@ const { authenticateToken } = require('../middlewares/auth');
 
 const prisma = new PrismaClient();
 
-// Protege todas as rotas com login
+// Protege todas as rotas com login - não vai entrar ninguém!!!
 router.use(authenticateToken);
 
-// --- CARGOS (ROLES) ---
-// O server.js já adiciona /api, então aqui usamos apenas /roles
+
 router.get('/roles', async (req, res) => {
     try {
         const roles = await prisma.role.findMany({ orderBy: { level: 'desc' } });
@@ -42,8 +41,7 @@ router.delete('/roles/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: "Erro ao excluir" }); }
 });
 
-// --- SETORES (SECTORS) ---
-// O server.js já adiciona /api, então aqui usamos apenas /sectors
+
 router.get('/sectors', async (req, res) => {
     try {
         const sectors = await prisma.sector.findMany();

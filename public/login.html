@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - ARB Monitoramento</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <div class="card login-mode">
         <h2>Acessar Projeto</h2>
-        
+
         <div class="logo-container">
             <img src="./img/ArBVision.png" alt="Logo" class="logo" onerror="this.style.display='none'">
         </div>
@@ -64,9 +66,10 @@
                 const res = await fetch('/api/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
                 const data = await res.json();
                 if (res.ok) alert("✅ " + data.message + "\nSeu gestor receberá um alerta."); else alert("❌ " + data.error);
-            } catch (err) { alert("Erro de conexão."); } 
+            } catch (err) { alert("Erro de conexão."); }
             finally { btn.innerText = textoOriginal; btn.disabled = false; }
         }
     </script>
 </body>
+
 </html>

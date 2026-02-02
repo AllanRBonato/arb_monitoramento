@@ -20,14 +20,13 @@ app.use(express.static('public'));
 
 // --- DEFINIÇÃO DAS ROTAS ---
 
-// Isso torna a pasta 'uploads' pública para acessar as fotos
 app.use('/uploads', express.static('uploads'));
 
 // Autenticação (Login)
 app.use('/api', authRoutes);
 
 // Gestão de Usuários
-app.use('/api/user', userRoutes);
+app.use('/api/users', userRoutes);
 
 // Configurações 
 app.use('/api', settingsRoutes);
@@ -42,5 +41,5 @@ app.use('/api/radius', radiusRoutes);
 app.use('/api/projects', projectRoutes);
 
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 55024;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));

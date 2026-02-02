@@ -13,14 +13,12 @@ const prisma = new PrismaClient();
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const dir = 'uploads/';
-        // Cria a pasta se não existir
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
         cb(null, dir);
     },
     filename: (req, file, cb) => {
-        // CORREÇÃO AQUI: Usamos req.user.id (que é o padrão do seu token)
         const userId = req.user ? (req.user.id || req.user.userId) : 'unknown';
         const ext = path.extname(file.originalname);
         cb(null, `avatar-${userId}-${Date.now()}${ext}`);
@@ -43,17 +41,15 @@ router.use(authenticateToken);
 
 // --- ROTAS DE USUÁRIO ---
 
-// 1. SALVAR AVATAR (CORRIGIDO)
+// 1. SALVAR AVATAR - Alenda do Aeng kkkk
 router.post('/avatar', upload.single('avatar'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: "Nenhum arquivo enviado." });
         }
 
-        // CORREÇÃO CRÍTICA AQUI:
         const userId = req.user.id || req.user.userId;
         
-        // Corrige barras invertidas do Windows para o banco de dados
         const avatarPath = req.file.path.replace(/\\/g, "/"); 
 
         await prisma.user.update({
@@ -86,7 +82,6 @@ router.get('/me', async (req, res) => {
 // 3. LISTAR USUÁRIOS
 router.get('/', async (req, res) => {
     try {
-        // Adapte conforme sua lógica de permissão
         const users = await prisma.user.findMany({
             select: {
                 id: true, name: true, email: true, phone: true, avatar: true,

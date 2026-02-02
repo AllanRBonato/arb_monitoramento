@@ -10,7 +10,6 @@
     --bg-color: #2c3e50;
     --text-color: #34495e;
     --border-color: #bdc3c7;
-    /* Borda um pouco mais visível */
 }
 
 * {
@@ -20,7 +19,6 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Diminuí a fonte base para 14px (antes era padrão 16px) */
 body {
     background-color: var(--bg-color);
     display: flex;
@@ -41,7 +39,6 @@ body {
 .card {
     background-color: white;
     padding: 1.5rem;
-    /* Menos padding interno no card */
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     width: 100%;
@@ -64,7 +61,6 @@ h3 {
     font-size: 1.1rem;
 }
 
-/* Formulários mais compactos */
 form {
     width: 100%;
 }
@@ -87,7 +83,6 @@ input,
 select {
     width: 100%;
     padding: 8px 12px;
-    /* Inputs mais baixinhos */
     border: 1px solid var(--border-color);
     border-radius: 6px;
     font-size: 0.9rem;
@@ -165,21 +160,16 @@ button:hover {
     object-fit: cover;
 }
 
-/* MODO ADMIN: LARGURA QUASE TOTAL */
 .admin-mode {
     width: 98%;
-    /* Ocupa 98% da largura da tela */
     max-width: 1800px;
-    /* Trava em monitores gigantes ultrawide */
     margin: 0 auto;
-    /* Centraliza */
 }
 
 /* =======================================================
     4. LAYOUTS INTERNOS (GRID)
    ======================================================= */
 
-/* Grid dos Controles (Setor/Cargo) */
 .admin-controls {
     display: none;
     grid-template-columns: 1fr 1fr;
@@ -189,7 +179,6 @@ button:hover {
     padding-bottom: 20px;
 }
 
-/* Card interno de configuração */
 .config-card {
     background: #fdfdfd;
     padding: 15px;
@@ -199,7 +188,6 @@ button:hover {
     flex-direction: column;
     gap: 10px;
     height: 100%;
-    /* Força altura igual nas duas colunas */
 }
 
 .config-title {
@@ -211,23 +199,17 @@ button:hover {
     margin-bottom: 5px;
 }
 
-/* Grid do Formulário de Usuário */
 .admin-form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    /* Duas colunas */
     gap: 15px 30px;
-    /* Gap Vertical 15px, Horizontal 30px */
     width: 100%;
     margin-bottom: 20px;
     align-items: end;
-    /* Alinha os inputs na base */
 }
 
-/* Lista Visual (Scrollável pequena) */
 .item-list {
     flex-grow: 1;
-    /* Ocupa o espaço restante */
     max-height: 250px;
     overflow-y: auto;
     border: 1px solid #eee;
@@ -248,7 +230,6 @@ button:hover {
     background-color: #f9f9f9;
 }
 
-/* Botões de ação pequenos (Lápis/Lixeira) */
 .action-btn {
     width: 28px;
     height: 28px;
@@ -268,7 +249,6 @@ button:hover {
     color: var(--danger-color);
 }
 
-/* Tags (Badges) */
 .tag-badge {
     font-size: 0.7rem;
     padding: 2px 6px;
@@ -284,11 +264,9 @@ button:hover {
    ======================================================= */
 .table-responsive {
     width: 100%;
-    /* Define uma altura máxima calculada para caber na tela sem rolar a página toda */
     max-height: calc(100vh - 350px);
     min-height: 300px;
     overflow-y: auto;
-    /* Barra de rolagem SÓ aqui */
 
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -297,7 +275,6 @@ button:hover {
     position: relative;
 }
 
-/* Personalização da Barra de Rolagem (Fica mais bonita) */
 .table-responsive::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -319,16 +296,13 @@ button:hover {
 
 table {
     width: 100%;
-    /* IMPORTANTE: Separate garante que o sticky header funcione sem bugs visuais */
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.9rem;
 }
 
-/* Cabeçalho Fixo (Sticky) */
 table th {
     background-color: #34495e;
-    /* Azul Escuro */
     color: white;
     font-weight: 600;
     text-transform: uppercase;
@@ -336,26 +310,20 @@ table th {
     letter-spacing: 0.5px;
     padding: 15px;
     text-align: left;
-
-    /* A Mágica do Fixador */
     position: sticky;
     top: 0;
     z-index: 100;
-    /* Garante que fique acima das linhas */
     border-bottom: 2px solid #2c3e50;
 }
 
-/* Células do Corpo */
 table td {
     padding: 12px 15px;
     border-bottom: 1px solid #ecf0f1;
     vertical-align: middle;
     color: #333;
     background-color: white;
-    /* Garante que o texto não fique transparente */
 }
 
-/* Efeito Zebra e Hover nas Linhas */
 table tr:nth-child(even) td {
     background-color: #f8f9fa;
 }
@@ -365,24 +333,20 @@ table tr:hover td {
     transition: 0.2s;
 }
 
-/* Ajuste das larguras das colunas */
 table th:first-child {
     border-top-left-radius: 4px;
 }
 
-/* Arredonda canto esquerdo */
 table th:last-child {
     border-top-right-radius: 4px;
     width: 100px;
     text-align: center;
 }
 
-/* Arredonda direito e fixa largura ações */
 table td:last-child {
     text-align: center;
 }
 
-/* Tags dentro da tabela */
 .tag-badge {
     display: inline-block;
     font-size: 0.7rem;
@@ -444,7 +408,6 @@ table td:last-child {
     transform: scale(1.05);
 }
 
-/* Menu Dropdown */
 .user-menu-container {
     position: relative;
 }
@@ -512,7 +475,6 @@ table td:last-child {
     }
 }
 
-/* Botão "Esqueci minha senha" no Login */
 .forgot-btn {
     background: none;
     border: none;
@@ -523,7 +485,6 @@ table td:last-child {
     text-decoration: underline;
     transition: 0.3s;
     width: auto;
-    /* Não ocupa a largura toda */
     display: inline-block;
 }
 
@@ -531,7 +492,6 @@ table td:last-child {
     color: var(--primary-color);
 }
 
-/* --- NOVO: CARD DE ALERTA NO ADMIN --- */
 .alert-card {
     background-color: #fff3cd;
     border: 1px solid #ffeeba;
@@ -540,7 +500,6 @@ table td:last-child {
     border-radius: 8px;
     margin-bottom: 20px;
     display: none;
-    /* Escondido se não tiver alertas */
 }
 
 .alert-title {
