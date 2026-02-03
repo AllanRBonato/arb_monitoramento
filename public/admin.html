@@ -65,9 +65,10 @@
             cursor: pointer;
             border: none;
             background: none;
-            font-size: 1rem;
-            padding: 2px 5px;
+            font-size: 1.3rem; /* Aumentado para celular */
+            padding: 8px 12px;
             transition: 0.2s;
+            margin: 0 2px;
         }
 
         .action-btn:hover {
@@ -82,6 +83,7 @@
             color: #3498db;
         }
 
+        /* Estilos de badges */
         .role-badge {
             font-weight: bold;
             padding: 4px 8px;
@@ -145,41 +147,25 @@
             color: #333;
         }
 
-        /* --- CORREÇÃO DO CELULAR --- */
+        /* --- CORREÇÃO DO CELULAR (TABELA RESPONSIVA) --- */
         .table-responsive {
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            overflow-x: auto;
+            overflow-x: auto; 
             -webkit-overflow-scrolling: touch;
             border: 1px solid #ddd;
         }
-
+        
         table {
-            min-width: 600px;
+            min-width: 600px; 
         }
 
-        /* Alteração feita aqui: ----- */
-        th,
-        td {
-            white-space: nowrap;
+        /* Evita quebra de linha em nomes e emails no celular */
+        th, td {
+            white-space: nowrap; 
             padding: 12px 15px;
             vertical-align: middle;
-        }
-
-        td input {
-            min-width: 150px;
-        }
-
-        .action-btn {
-            font-size: 1.3rem !important;
-            padding: 8px 12px !important;
-            margin: 0 2px;
-        }
-
-        td:last-child {
-            min-width: 100px;
-            text-align: center;
         }
     </style>
 </head>
@@ -264,7 +250,14 @@
                 <select id="sector" style="margin-top: 10px;" required>
                     <option>Carregando...</option>
                 </select>
-            </div>
+
+                <div id="projectDiv" style="display:none; margin-top: 10px;">
+                    <label style="font-size: 0.8rem; color: #666; margin-bottom: 5px; display:block;">Vincular ao Projeto:</label>
+                    <select id="projectSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">Selecione o Projeto...</option>
+                    </select>
+                </div>
+                </div>
             <button type="submit" class="btn-primary" style="grid-column: span 2;">Criar Usuário</button>
         </form>
 
@@ -296,7 +289,7 @@
         let editingUserId = null;
         const token = localStorage.getItem('token');
         const myRole = localStorage.getItem('userRole');
-        const mySector = localStorage.getItem('userSector');
+        const mySector = localStorage.getItem('userSector'); 
 
         if (!token) { window.location.href = 'login.html'; }
         else {
@@ -313,6 +306,7 @@
             }
             await checarPedidosSenha();
             await carregarOpcoesDropdown();
+            await carregarDropdownProjetos(); // <--- NOVA FUNÇÃO
             await carregarUsuarios();
         }
 
@@ -339,6 +333,41 @@
             }
         }
 
+        // --- NOVA FUNÇÃO: Carregar Projetos para o Dropdown ---
+        async function carregarDropdownProjetos() {
+            try {
+                const res = await fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } });
+                // Se der erro de permissão (ex: operador não vê projetos), apenas ignora
+                if (!res.ok) return;
+
+                const projects = await res.json();
+                const select = document.getElementById('projectSelect');
+                select.innerHTML = '<option value="">Selecione o Projeto...</option>';
+                
+                if (Array.isArray(projects)) {
+                    projects.forEach(p => {
+                        select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                    });
+                }
+            } catch (e) { console.error("Erro ao carregar projetos dropdown", e); }
+        }
+        // ------------------------------------------------------
+
+        // --- LÓGICA: Mostrar Dropdown apenas se cargo for Cliente ---
+        document.getElementById('role').addEventListener('change', function() {
+            const selectedText = this.options[this.selectedIndex].text.toUpperCase();
+            const projectDiv = document.getElementById('projectDiv');
+            
+            // Verifica palavras chave para mostrar o campo
+            if (selectedText.includes('CLIENTE') || selectedText.includes('VISUALIZA') || selectedText.includes('EXTERNO')) {
+                projectDiv.style.display = 'block';
+            } else {
+                projectDiv.style.display = 'none';
+                document.getElementById('projectSelect').value = ""; // Limpa seleção
+            }
+        });
+        // -----------------------------------------------------------
+
         async function carregarUsuarios() {
             try {
                 const res = await fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -346,16 +375,14 @@
                 const tbody = document.querySelector('#usersTable tbody');
                 tbody.innerHTML = '';
 
-                // --- FILTRO DE SEGURANÇA ---
+                // Filtro de Segurança
                 const usuariosFiltrados = users.filter(u => {
                     if (myRole === 'ADMIN_MASTER') return true;
-
                     if (u.sector !== mySector) return false;
-
+                    
                     let cargoUser = u.role || u.roleName || '';
                     if (typeof cargoUser === 'object') cargoUser = cargoUser.name;
                     if (cargoUser === 'ADMIN_MASTER') return false;
-
                     return true;
                 });
 
@@ -372,19 +399,10 @@
                     let badgeBg = '#ecf0f1';
                     let badgeColor = '#2c3e50';
 
-                    if (cargo === 'ADMIN_MASTER') {
-                        badgeBg = '#fadbd8';
-                        badgeColor = '#c0392b';
-                    } else if (cargo === 'FULL') {
-                        badgeBg = '#d4efdf';
-                        badgeColor = '#27ae60';
-                    } else if (cargo === 'WRITE' || cargo === 'OPERADOR') {
-                        badgeBg = '#fcf3cf';
-                        badgeColor = '#d68910';
-                    } else if (cargo === 'READ' || cargo === 'LEITURA') {
-                        badgeBg = '#d6eaf8';
-                        badgeColor = '#2980b9';
-                    }
+                    if (cargo === 'ADMIN_MASTER') { badgeBg = '#fadbd8'; badgeColor = '#c0392b'; }
+                    else if (cargo === 'FULL') { badgeBg = '#d4efdf'; badgeColor = '#27ae60'; }
+                    else if (cargo === 'WRITE' || cargo === 'OPERADOR') { badgeBg = '#fcf3cf'; badgeColor = '#d68910'; }
+                    else if (cargo === 'READ' || cargo === 'LEITURA') { badgeBg = '#d6eaf8'; badgeColor = '#2980b9'; }
 
                     tbody.innerHTML += `
                         <tr>
@@ -417,8 +435,7 @@
                 const alertBox = document.getElementById('passwordAlerts');
                 const list = document.getElementById('requestsList');
                 list.innerHTML = '';
-
-                // Filtra pedidos: Admin vê tudo, Full vê só do setor
+                
                 const pedidosFiltrados = requests.filter(req => {
                     if (myRole === 'ADMIN_MASTER') return true;
                     return req.user.sector.name === mySector;
@@ -565,18 +582,15 @@
                 if (rolesRes.status === 401 || sectorsRes.status === 401) return;
                 const roles = await rolesRes.json();
                 const sectors = await sectorsRes.json();
-
-                // --- FILTRO DE SEGURANÇA: ESCONDE ADMIN_MASTER ---
+                
                 if (Array.isArray(roles)) {
                     roleSelect.innerHTML = '<option value="">Selecione...</option>';
                     roles.forEach(r => {
-                        // Se não sou ADMIN_MASTER, não posso selecionar ADMIN_MASTER
+                        // Segurança: não mostra ADMIN_MASTER se eu não for um
                         if (myRole !== 'ADMIN_MASTER' && r.name === 'ADMIN_MASTER') return;
-
                         roleSelect.innerHTML += `<option value="${r.name}">${r.name} (${r.label})</option>`;
                     });
                 }
-
                 if (Array.isArray(sectors)) {
                     sectorSelect.innerHTML = '<option value="">Selecione...</option>';
                     sectors.forEach(s => sectorSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`);
@@ -594,8 +608,13 @@
                 phone: document.getElementById('phone').value,
                 roleName: document.getElementById('role').value,
                 sectorName: document.getElementById('sector').value,
-                password: document.getElementById('password').value
+                password: document.getElementById('password').value,
+                
+                // === NOVO CAMPO: Manda o projeto vinculado ===
+                viewProjectId: document.getElementById('projectSelect').value || null
+                // =============================================
             };
+            
             const url = editingUserId ? `/api/users/${editingUserId}` : '/api/users';
             const method = editingUserId ? 'PUT' : 'POST';
             try {
@@ -621,8 +640,24 @@
                 document.getElementById('name').value = user.name;
                 document.getElementById('email').value = user.email;
                 document.getElementById('phone').value = user.phone;
-                if (user.role) document.getElementById('role').value = user.role.name;
+                
+                if (user.role) {
+                    document.getElementById('role').value = user.role.name;
+                    // Dispara evento para mostrar/esconder o dropdown de projeto se necessário
+                    document.getElementById('role').dispatchEvent(new Event('change'));
+                }
+                
                 if (user.sector) document.getElementById('sector').value = user.sector.name;
+                
+                // === CARREGAR O VÍNCULO DO PROJETO ===
+                if (user.viewProjectId) {
+                   // Pequeno delay para garantir que o dropdown carregou
+                   setTimeout(() => {
+                       document.getElementById('projectSelect').value = user.viewProjectId;
+                   }, 300);
+                }
+                // =====================================
+
                 const passInput = document.getElementById('password');
                 passInput.value = "";
                 passInput.placeholder = "Deixe vazio para manter a senha";
@@ -650,6 +685,7 @@
             btn.style.backgroundColor = "";
             document.getElementById('password').placeholder = "Senha Inicial";
             document.getElementById('password').required = true;
+            document.getElementById('projectDiv').style.display = 'none'; // Esconde o campo
         }
     </script>
 </body>
