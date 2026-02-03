@@ -66,7 +66,6 @@
             border: none;
             background: none;
             font-size: 1.3rem;
-            /* Aumentado para celular */
             padding: 8px 12px;
             transition: 0.2s;
             margin: 0 2px;
@@ -84,7 +83,6 @@
             color: #3498db;
         }
 
-        /* Estilos de badges */
         .role-badge {
             font-weight: bold;
             padding: 4px 8px;
@@ -161,8 +159,7 @@
             min-width: 600px;
         }
 
-        th,
-        td {
+        th, td {
             white-space: nowrap;
             padding: 12px 15px;
             vertical-align: middle;
@@ -194,6 +191,7 @@
                 </div>
                 <div class="item-list" id="listaSetores">Carregando...</div>
             </div>
+
             <div class="config-card">
                 <div class="config-title">⚖️ Gestão de Cargos</div>
                 <input type="hidden" id="roleIdEdit">
@@ -251,14 +249,29 @@
                     <option>Carregando...</option>
                 </select>
 
-                <div id="projectDiv" style="display:none; margin-top: 10px;">
-                    <label style="font-size: 0.8rem; color: #666; margin-bottom: 5px; display:block;">Vincular ao
-                        Projeto:</label>
-                    <select id="projectSelect"
-                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <option value="">Selecione o Projeto...</option>
-                    </select>
+                <div id="projectDiv" style="display:none; margin-top: 15px;">
+                    <label style="font-weight: bold; color: #2c3e50; margin-bottom: 5px; display:block;">
+                        📂 Projetos Vinculados:
+                    </label>
+                    <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px;">
+                        Marque os projetos que este usuário pode acessar:
+                    </div>
+                    
+                    <div id="projectList" style="
+                        border: 1px solid #bdc3c7; 
+                        border-radius: 6px; 
+                        padding: 10px; 
+                        max-height: 150px; 
+                        overflow-y: auto; 
+                        background: #fff;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                    ">
+                        <div style="color:#999; font-style:italic;">Carregando projetos...</div>
+                    </div>
                 </div>
+
             </div>
             <button type="submit" class="btn-primary" style="grid-column: span 2;">Criar Usuário</button>
         </form>
@@ -335,35 +348,85 @@
             }
         }
 
+        // --- CARREGAR PROJETOS (CHECKBOX) ---
         async function carregarDropdownProjetos() {
             try {
                 const res = await fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!res.ok) return;
+                if (!res.ok) {
+                    document.getElementById('projectList').innerHTML = '<small>Não foi possível carregar projetos.</small>';
+                    return;
+                }
 
                 const projects = await res.json();
-                const select = document.getElementById('projectSelect');
-                select.innerHTML = '<option value="">Selecione o Projeto...</option>';
+                const container = document.getElementById('projectList');
+                container.innerHTML = '';
 
-                if (Array.isArray(projects)) {
+                if (Array.isArray(projects) && projects.length > 0) {
                     projects.forEach(p => {
-                        select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                        const div = document.createElement('div');
+                        div.style.display = 'flex';
+                        div.style.alignItems = 'center';
+                        div.innerHTML = `
+                            <input type="checkbox" id="proj_${p.id}" value="${p.id}" class="project-checkbox" style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                            <label for="proj_${p.id}" style="margin: 0; cursor: pointer; color: #333;">${p.name}</label>
+                        `;
+                        container.appendChild(div);
                     });
+                } else {
+                    container.innerHTML = '<div style="padding:5px; color:#777;">Nenhum projeto cadastrado.</div>';
                 }
-            } catch (e) { console.error("Erro ao carregar projetos dropdown", e); }
+            } catch (e) { console.error("Erro checkbox projetos", e); }
         }
 
+        // --- GATILHO PARA MOSTRAR PROJETOS ---
         document.getElementById('role').addEventListener('change', function () {
-            const selectedText = this.options[this.selectedIndex].text.toUpperCase();
+            const selectedOption = this.options[this.selectedIndex];
+            const selectedText = selectedOption.text.toUpperCase();
+            const level = parseInt(selectedOption.getAttribute('data-level')) || 0;
             const projectDiv = document.getElementById('projectDiv');
 
-            if (selectedText.includes('CLIENTE') || selectedText.includes('VISUALIZA') || selectedText.includes('EXTERNO')) {
+            if (level === 10 || selectedText.includes('CLIENTE') || selectedText.includes('VISUALIZA')) {
                 projectDiv.style.display = 'block';
             } else {
                 projectDiv.style.display = 'none';
-                document.getElementById('projectSelect').value = "";
+                document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = false);
             }
         });
 
+        // --- SALVAR USUÁRIO (CRIA/EDITA) ---
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const checkboxes = document.querySelectorAll('.project-checkbox:checked');
+            const projectIds = Array.from(checkboxes).map(cb => cb.value);
+
+            const data = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                roleName: document.getElementById('role').value,
+                sectorName: document.getElementById('sector').value,
+                password: document.getElementById('password').value,
+                viewProjectIds: projectIds
+            };
+
+            const url = editingUserId ? `/api/users/${editingUserId}` : '/api/users';
+            const method = editingUserId ? 'PUT' : 'POST';
+            
+            try {
+                const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data) });
+                if (res.ok) {
+                    alert(editingUserId ? 'Usuário atualizado!' : 'Usuário criado!');
+                    limparFormUsuario();
+                    carregarUsuarios();
+                } else {
+                    const err = await res.json();
+                    alert("Erro: " + err.error);
+                }
+            } catch (error) { alert("Erro de conexão."); }
+        });
+
+        // --- CARREGAR USUÁRIO NA TELA ---
         async function carregarUsuarios() {
             try {
                 const res = await fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -371,11 +434,9 @@
                 const tbody = document.querySelector('#usersTable tbody');
                 tbody.innerHTML = '';
 
-                // Filtro de Segurança
                 const usuariosFiltrados = users.filter(u => {
                     if (myRole === 'ADMIN_MASTER') return true;
                     if (u.sector !== mySector) return false;
-
                     let cargoUser = u.role || u.roleName || '';
                     if (typeof cargoUser === 'object') cargoUser = cargoUser.name;
                     if (cargoUser === 'ADMIN_MASTER') return false;
@@ -418,53 +479,70 @@
                         </tr>
                     `;
                 });
-            } catch (error) {
-                console.error("Erro ao carregar usuários:", error);
-            }
+            } catch (error) { console.error("Erro ao carregar usuários:", error); }
         }
 
-        async function checarPedidosSenha() {
-            if (myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') return;
-            const res = await fetch('/api/admin/password-requests', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) {
-                const requests = await res.json();
-                const alertBox = document.getElementById('passwordAlerts');
-                const list = document.getElementById('requestsList');
-                list.innerHTML = '';
+        // --- PREPARAR EDIÇÃO ---
+        async function prepararEdicaoUsuario(id) {
+            try {
+                const res = await fetch(`/api/users/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const user = await res.json();
+                editingUserId = user.id;
+                document.getElementById('name').value = user.name;
+                document.getElementById('email').value = user.email;
+                document.getElementById('phone').value = user.phone;
 
-                const pedidosFiltrados = requests.filter(req => {
-                    if (myRole === 'ADMIN_MASTER') return true;
-                    return req.user.sector.name === mySector;
-                });
-
-                if (pedidosFiltrados.length > 0) {
-                    alertBox.style.display = 'block';
-                    pedidosFiltrados.forEach(req => {
-                        list.innerHTML += `<div style="background:white; padding:10px; border-radius:6px; border:1px solid #e2e3e5; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div><strong>${req.user.name}</strong> (${req.user.email})<br><small>Setor: ${req.user.sector.name}</small></div><button class="btn-primary" style="width:auto; font-size:0.8rem;" onclick="resolverPedido('${req.id}', '${req.user.id}', '${req.user.name}')">Alterar Senha</button></div>`;
-                    });
-                } else {
-                    alertBox.style.display = 'none';
+                if (user.role) {
+                    document.getElementById('role').value = user.role.name;
+                    document.getElementById('role').dispatchEvent(new Event('change'));
                 }
-            }
+                if (user.sector) document.getElementById('sector').value = user.sector.name;
+
+                document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = false);
+
+                if (user.viewProjects && Array.isArray(user.viewProjects)) {
+                    user.viewProjects.forEach(proj => {
+                        const checkbox = document.getElementById(`proj_${proj.id}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
+
+                const passInput = document.getElementById('password');
+                passInput.value = "";
+                passInput.placeholder = "Deixe vazio para manter a senha";
+                passInput.required = false;
+                
+                document.getElementById('createForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const btn = document.querySelector('#createForm button[type="submit"]');
+                btn.innerText = "Salvar Alterações";
+                btn.style.backgroundColor = "#e67e22";
+            } catch (e) { console.error(e); }
         }
 
-        async function resolverPedido(requestId, userId, userName) {
-            const newPass = prompt(`Digite a nova senha para ${userName}:`);
-            if (!newPass) return;
-            const updateRes = await fetch(`/api/users/${userId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ password: newPass }) });
-            if (updateRes.ok) {
-                await fetch(`/api/admin/password-requests/${requestId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-                alert(`Senha alterada!`);
-                checarPedidosSenha();
-            } else {
-                alert("Erro.");
-            }
+        // --- EXCLUIR USUÁRIO ---
+        async function excluirUsuario(id) {
+            if (!confirm("Tem certeza que deseja remover este usuário?")) return;
+            await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            carregarUsuarios();
         }
 
+        // --- LIMPAR FORMULÁRIO ---
+        function limparFormUsuario() {
+            editingUserId = null;
+            document.getElementById('createForm').reset();
+            document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = false);
+            const btn = document.querySelector('#createForm button[type="submit"]');
+            btn.innerText = "Criar Usuário";
+            btn.style.backgroundColor = "";
+            document.getElementById('password').placeholder = "Senha Inicial";
+            document.getElementById('password').required = true;
+            document.getElementById('projectDiv').style.display = 'none';
+        }
+
+        // --- FUNÇÕES DE CARGOS E SETORES (COMPLETAS) ---
         async function atualizarListaSetores() {
             try {
                 const res = await fetch('/api/sectors', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!res.ok) return;
                 const setores = await res.json();
                 const divLista = document.getElementById('listaSetores');
                 divLista.innerHTML = '';
@@ -474,9 +552,7 @@
                     });
                 }
                 carregarOpcoesDropdown();
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) {}
         }
 
         async function salvarSetor() {
@@ -486,11 +562,7 @@
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/sectors/${id}` : '/api/sectors';
             const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) });
-            if (res.ok) {
-                alert(id ? 'Atualizado!' : 'Criado!');
-                cancelarEdicaoSetor();
-                atualizarListaSetores();
-            }
+            if (res.ok) { alert('Sucesso!'); cancelarEdicaoSetor(); atualizarListaSetores(); }
         }
 
         function prepararEdicaoSetor(id, name) {
@@ -509,14 +581,13 @@
 
         async function excluirSetor(id) {
             if (!confirm("Tem certeza?")) return;
-            const res = await fetch(`/api/sectors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) atualizarListaSetores(); else alert("Erro ao excluir");
+            await fetch(`/api/sectors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            atualizarListaSetores();
         }
 
         async function atualizarListaCargos() {
             try {
                 const res = await fetch('/api/roles', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (!res.ok) return;
                 const cargos = await res.json();
                 const divLista = document.getElementById('listaCargos');
                 divLista.innerHTML = '';
@@ -525,49 +596,32 @@
                         divLista.innerHTML += `<div class="list-item"><div style="display:flex; flex-direction:column;"><span>${c.name} <small style="color:#999;">(Nv. ${c.level})</small></span><span class="tag-badge">${c.label}</span></div><div><button class="action-btn btn-edit" onclick="prepararEdicaoCargo('${c.id}', '${c.name}', '${c.level}', '${c.label}')">✏️</button><button class="action-btn btn-del" onclick="excluirCargo('${c.id}')">🗑️</button></div></div>`;
                     });
                 }
-                carregarOpcoesDropdown();
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) {}
         }
 
         async function salvarCargo() {
             const id = document.getElementById('roleIdEdit').value;
-            const nameInput = document.getElementById('newRoleName');
-            const labelInput = document.getElementById('newRoleLabel');
-            const levelInput = document.getElementById('newRoleLevel');
+            const name = document.getElementById('newRoleName').value.toUpperCase().trim();
+            const level = parseInt(document.getElementById('newRoleLevel').value);
+            const label = document.getElementById('newRoleLabel').value.trim();
 
-            const name = nameInput.value.toUpperCase().trim();
-            const label = labelInput.value.trim();
-            const level = parseInt(levelInput.value);
-
-            if (!name) { alert("O nome do cargo é obrigatório!"); nameInput.focus(); return; }
-            if (!label) { alert("A tag (rótulo) é obrigatória!"); labelInput.focus(); return; }
+            if (!name || !label) { alert("Preencha nome e tag!"); return; }
 
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/roles/${id}` : '/api/roles';
 
             try {
-                const res = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ name, level, label })
-                });
-
-                const data = await res.json();
-
+                const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name, level, label }) });
                 if (res.ok) {
-                    alert(id ? 'Cargo atualizado com sucesso!' : 'Cargo criado com sucesso!');
+                    alert(id ? 'Cargo atualizado!' : 'Cargo criado!');
                     cancelarEdicaoCargo();
                     atualizarListaCargos();
                     carregarOpcoesDropdown();
                 } else {
-                    alert("Erro ao salvar: " + (data.error || "Erro desconhecido"));
+                    const err = await res.json();
+                    alert("Erro: " + (err.error || "Desconhecido"));
                 }
-            } catch (e) {
-                console.error(e);
-                alert("Erro de conexão com o servidor.");
-            }
+            } catch (e) { alert("Erro de conexão."); }
         }
 
         function prepararEdicaoCargo(id, name, level, label) {
@@ -589,8 +643,8 @@
 
         async function excluirCargo(id) {
             if (!confirm("Tem certeza?")) return;
-            const res = await fetch(`/api/roles/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) atualizarListaCargos(); else alert("Erro ao excluir");
+            await fetch(`/api/roles/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            atualizarListaCargos();
         }
 
         async function carregarOpcoesDropdown() {
@@ -598,110 +652,51 @@
                 const roleSelect = document.getElementById('role');
                 const sectorSelect = document.getElementById('sector');
                 const [rolesRes, sectorsRes] = await Promise.all([fetch('/api/roles', { headers: { 'Authorization': `Bearer ${token}` } }), fetch('/api/sectors', { headers: { 'Authorization': `Bearer ${token}` } })]);
-                if (rolesRes.status === 401 || sectorsRes.status === 401) return;
+                if (rolesRes.status === 401) return;
                 const roles = await rolesRes.json();
                 const sectors = await sectorsRes.json();
 
                 if (Array.isArray(roles)) {
-                    roleSelect.innerHTML = '<option value="">Selecione...</option>';
+                    roleSelect.innerHTML = '<option value="" data-level="0">Selecione...</option>';
                     roles.forEach(r => {
-                        // Segurança: não mostra ADMIN_MASTER se eu não for um
                         if (myRole !== 'ADMIN_MASTER' && r.name === 'ADMIN_MASTER') return;
-                        roleSelect.innerHTML += `<option value="${r.name}">${r.name} (${r.label})</option>`;
+                        roleSelect.innerHTML += `<option value="${r.name}" data-level="${r.level}">${r.name} (${r.label})</option>`;
                     });
                 }
                 if (Array.isArray(sectors)) {
                     sectorSelect.innerHTML = '<option value="">Selecione...</option>';
                     sectors.forEach(s => sectorSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`);
                 }
-            } catch (error) {
-                console.error("Erro dropdowns:", error);
+            } catch (error) { console.error("Erro dropdowns:", error); }
+        }
+
+        // --- PEDIDOS DE SENHA ---
+        async function checarPedidosSenha() {
+            if (myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') return;
+            const res = await fetch('/api/admin/password-requests', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const requests = await res.json();
+                const list = document.getElementById('requestsList');
+                list.innerHTML = '';
+                const pedidosFiltrados = requests.filter(req => myRole === 'ADMIN_MASTER' || req.user.sector.name === mySector);
+                if (pedidosFiltrados.length > 0) {
+                    document.getElementById('passwordAlerts').style.display = 'block';
+                    pedidosFiltrados.forEach(req => {
+                        list.innerHTML += `<div style="background:white; padding:10px; border-radius:6px; border:1px solid #e2e3e5; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div><strong>${req.user.name}</strong> (${req.user.email})<br><small>Setor: ${req.user.sector.name}</small></div><button class="btn-primary" style="width:auto; font-size:0.8rem;" onclick="resolverPedido('${req.id}', '${req.user.id}', '${req.user.name}')">Alterar Senha</button></div>`;
+                    });
+                } else { document.getElementById('passwordAlerts').style.display = 'none'; }
             }
         }
 
-        document.getElementById('createForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const data = {
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                roleName: document.getElementById('role').value,
-                sectorName: document.getElementById('sector').value,
-                password: document.getElementById('password').value,
-
-                viewProjectId: document.getElementById('projectSelect').value || null
-            };
-
-            const url = editingUserId ? `/api/users/${editingUserId}` : '/api/users';
-            const method = editingUserId ? 'PUT' : 'POST';
-            try {
-                const res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data) });
-                if (res.ok) {
-                    alert(editingUserId ? 'Usuário atualizado!' : 'Usuário criado!');
-                    limparFormUsuario();
-                    carregarUsuarios();
-                } else {
-                    const err = await res.json();
-                    alert("Erro: " + err.error);
-                }
-            } catch (error) {
-                alert("Erro de conexão.");
-            }
-        });
-
-        async function prepararEdicaoUsuario(id) {
-            try {
-                const res = await fetch(`/api/users/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
-                const user = await res.json();
-                editingUserId = user.id;
-                document.getElementById('name').value = user.name;
-                document.getElementById('email').value = user.email;
-                document.getElementById('phone').value = user.phone;
-
-                if (user.role) {
-                    document.getElementById('role').value = user.role.name;
-                    // Dispara evento para mostrar/esconder o dropdown de projeto se necessário
-                    document.getElementById('role').dispatchEvent(new Event('change'));
-                }
-
-                if (user.sector) document.getElementById('sector').value = user.sector.name;
-
-                if (user.viewProjectId) {
-                    setTimeout(() => {
-                        document.getElementById('projectSelect').value = user.viewProjectId;
-                    }, 300);
-                }
-
-                const passInput = document.getElementById('password');
-                passInput.value = "";
-                passInput.placeholder = "Deixe vazio para manter a senha";
-                passInput.required = false;
-                const btn = document.querySelector('#createForm button[type="submit"]');
-                btn.innerText = "Salvar Alterações";
-                btn.style.backgroundColor = "#e67e22";
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        async function excluirUsuario(id) {
-            if (!confirm("Tem certeza que deseja remover este usuário?")) return;
-            await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-            carregarUsuarios();
-        }
-
-        function limparFormUsuario() {
-            editingUserId = null;
-            document.getElementById('createForm').reset();
-            const btn = document.querySelector('#createForm button[type="submit"]');
-            btn.innerText = "Criar Usuário";
-            btn.style.backgroundColor = "";
-            document.getElementById('password').placeholder = "Senha Inicial";
-            document.getElementById('password').required = true;
-            document.getElementById('projectDiv').style.display = 'none';
+        async function resolverPedido(requestId, userId, userName) {
+            const newPass = prompt(`Digite a nova senha para ${userName}:`);
+            if (!newPass) return;
+            const updateRes = await fetch(`/api/users/${userId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ password: newPass }) });
+            if (updateRes.ok) {
+                await fetch(`/api/admin/password-requests/${requestId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                alert(`Senha alterada!`); checarPedidosSenha();
+            } else { alert("Erro."); }
         }
     </script>
 </body>
-
 </html>
