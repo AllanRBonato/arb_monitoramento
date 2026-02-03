@@ -27,6 +27,7 @@ app.use('/api', authRoutes);
 
 // Gestão de Usuários
 app.use('/api/users', userRoutes);
+app.use('/api/user', userRoutes);
 
 // Configurações 
 app.use('/api', settingsRoutes);

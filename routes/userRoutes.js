@@ -27,7 +27,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // Limite 5MB
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
@@ -39,17 +39,20 @@ const upload = multer({
 
 router.use(authenticateToken);
 
-// --- ROTAS DE USUÁRIO ---
+async function getRequester(req) {
+    const id = req.user.id || req.user.userId;
+    return await prisma.user.findUnique({
+        where: { id },
+        include: { role: true, sector: true }
+    });
+}
 
-// 1. SALVAR AVATAR - Alenda do Aeng kkkk
+// 1. SALVAR AVATAR
 router.post('/avatar', upload.single('avatar'), async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: "Nenhum arquivo enviado." });
-        }
+        if (!req.file) return res.status(400).json({ error: "Nenhum arquivo enviado." });
 
         const userId = req.user.id || req.user.userId;
-        
         const avatarPath = req.file.path.replace(/\\/g, "/"); 
 
         await prisma.user.update({
@@ -58,7 +61,6 @@ router.post('/avatar', upload.single('avatar'), async (req, res) => {
         });
 
         res.json({ message: "Avatar atualizado!", path: avatarPath });
-
     } catch (error) {
         console.error("Erro Upload Avatar:", error);
         res.status(500).json({ error: "Erro ao salvar imagem." });
@@ -68,12 +70,8 @@ router.post('/avatar', upload.single('avatar'), async (req, res) => {
 // 2. OBTER MEUS DADOS
 router.get('/me', async (req, res) => {
     try {
-        const userId = req.user.id || req.user.userId;
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, name: true, email: true, avatar: true, role: { include: { } }, sector: true } 
-        });
-        res.json(user);
+        const requester = await getRequester(req);
+        res.json(requester);
     } catch (error) {
         res.status(500).json({ error: "Erro ao buscar dados." });
     }
@@ -82,10 +80,24 @@ router.get('/me', async (req, res) => {
 // 3. LISTAR USUÁRIOS
 router.get('/', async (req, res) => {
     try {
+        const requester = await getRequester(req);
+        if (!requester) return res.status(403).json({ error: "Usuário não encontrado." });
+
+        // REGRA 1: FILTRO DE SETOR
+        // Se Nível < 100, só vê o próprio setor. Se for >= 100 (Master), vê tudo.
+        let whereClause = {};
+        
+        if (requester.role.level < 100) {
+            whereClause = {
+                sectorId: requester.sectorId
+            };
+        }
+
         const users = await prisma.user.findMany({
+            where: whereClause,
             select: {
                 id: true, name: true, email: true, phone: true, avatar: true,
-                role: { select: { name: true, label: true } },
+                role: { select: { name: true, label: true, level: true } },
                 sector: { select: { name: true } }
             },
             orderBy: { name: 'asc' }
@@ -95,6 +107,7 @@ router.get('/', async (req, res) => {
             ...u, 
             role: u.role ? u.role.name : null, 
             roleLabel: u.role ? u.role.label : null, 
+            roleLevel: u.role ? u.role.level : 0,
             sector: u.sector ? u.sector.name : null
         }));
         res.json(formatted);
@@ -111,18 +124,42 @@ router.get('/:id', async (req, res) => {
     res.json(user);
 });
 
-// 5. CRIAR USUÁRIO
+// 5. CRIAR USUÁRIO (COM TRAVA DE HIERARQUIA)
 router.post('/', async (req, res) => {
     const { name, email, password, phone, roleName, sectorName } = req.body;
     try {
-        const role = await prisma.role.findUnique({ where: { name: roleName } });
-        const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
+        const requester = await getRequester(req);
 
-        if (!role || !sector) return res.status(400).json({ error: "Cargo ou Setor inválido" });
+        // Buscar Cargo Alvo
+        const targetRole = await prisma.role.findUnique({ where: { name: roleName } });
+        if (!targetRole) return res.status(400).json({ error: "Cargo inválido" });
+
+        // REGRA 2: HIERARQUIA
+        if (targetRole.level >= requester.role.level) {
+            return res.status(403).json({ 
+                error: "Permissão negada: Você não pode criar um usuário com este nível de acesso." 
+            });
+        }
+
+        // Definir Setor
+        let sectorIdToUse;
+        
+        // Se for Master (100), pode escolher o setor. Se for Full (50), cria no próprio setor obrigatóriamente.
+        if (requester.role.level >= 100) {
+            const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
+            if (!sector) return res.status(400).json({ error: "Setor inválido" });
+            sectorIdToUse = sector.id;
+        } else {
+            sectorIdToUse = requester.sectorId; // Força o setor do chefe
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
         await prisma.user.create({
-            data: { name, email, password: hashedPassword, phone, roleId: role.id, sectorId: sector.id }
+            data: { 
+                name, email, password: hashedPassword, phone, 
+                roleId: targetRole.id, 
+                sectorId: sectorIdToUse 
+            }
         });
         res.status(201).json({ message: "Criado com sucesso!" });
     } catch (e) { res.status(500).json({ error: "Erro ao criar: " + e.message }); }
@@ -133,18 +170,42 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { name, email, phone, roleName, sectorName, password } = req.body;
     try {
+        const requester = await getRequester(req);
+        
+        // Quem estamos tentando editar?
+        const targetUser = await prisma.user.findUnique({ 
+            where: { id }, include: { role: true } 
+        });
+
+        // REGRA 3: PROTEÇÃO DE EDIÇÃO
+        if (requester.role.level < 100) {
+            if (targetUser.role.level >= requester.role.level) {
+                return res.status(403).json({ error: "Você não pode alterar dados de um superior ou de mesmo nível." });
+            }
+        }
+
         const updateData = { name, email, phone };
+        
         if (password && password.trim() !== "") {
             updateData.password = await bcrypt.hash(password, 10);
         }
+
+        // Troca de Cargo (Só se tiver nível pra isso)
         if (roleName) {
-            const role = await prisma.role.findUnique({ where: { name: roleName } });
-            if (role) updateData.roleId = role.id;
+            const newRole = await prisma.role.findUnique({ where: { name: roleName } });
+            if (newRole) {
+                if (newRole.level >= requester.role.level) {
+                    return res.status(403).json({ error: "Você não pode promover alguém para seu nível ou superior." });
+                }
+                updateData.roleId = newRole.id;
+            }
         }
-        if (sectorName) {
+
+        if (sectorName && requester.role.level >= 100) {
             const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
             if (sector) updateData.sectorId = sector.id;
         }
+
         await prisma.user.update({ where: { id }, data: updateData });
         res.json({ message: "Atualizado!" });
     } catch (error) { res.status(500).json({ error: "Erro ao atualizar." }); }
@@ -153,6 +214,18 @@ router.put('/:id', async (req, res) => {
 // 7. EXCLUIR USUÁRIO
 router.delete('/:id', async (req, res) => {
     try {
+        const requester = await getRequester(req);
+        const targetUser = await prisma.user.findUnique({ 
+            where: { id: req.params.id }, include: { role: true } 
+        });
+
+        if (!targetUser) return res.status(404).json({ error: "Usuário não existe." });
+
+        // REGRA 4: PROTEÇÃO DE EXCLUSÃO
+        if (targetUser.role.level >= requester.role.level) {
+            return res.status(403).json({ error: "Você não pode excluir um usuário de patente igual ou superior." });
+        }
+
         await prisma.user.delete({ where: { id: req.params.id } });
         res.json({ message: "Excluído!" });
     } catch (e) { res.status(500).json({ error: "Erro ao excluir." }); }
