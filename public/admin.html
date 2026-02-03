@@ -533,17 +533,40 @@
 
         async function salvarCargo() {
             const id = document.getElementById('roleIdEdit').value;
-            const name = document.getElementById('newRoleName').value.toUpperCase();
-            const level = document.getElementById('newRoleLevel').value;
-            const label = document.getElementById('newRoleLabel').value;
-            if (!name || !label) return;
+            const nameInput = document.getElementById('newRoleName');
+            const labelInput = document.getElementById('newRoleLabel');
+            const levelInput = document.getElementById('newRoleLevel');
+
+            const name = nameInput.value.toUpperCase().trim();
+            const label = labelInput.value.trim();
+            const level = parseInt(levelInput.value);
+
+            if (!name) { alert("O nome do cargo é obrigatório!"); nameInput.focus(); return; }
+            if (!label) { alert("A tag (rótulo) é obrigatória!"); labelInput.focus(); return; }
+
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/roles/${id}` : '/api/roles';
-            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name, level, label }) });
-            if (res.ok) {
-                alert(id ? 'Atualizado!' : 'Criado!');
-                cancelarEdicaoCargo();
-                atualizarListaCargos();
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ name, level, label })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert(id ? 'Cargo atualizado com sucesso!' : 'Cargo criado com sucesso!');
+                    cancelarEdicaoCargo();
+                    atualizarListaCargos();
+                    carregarOpcoesDropdown();
+                } else {
+                    alert("Erro ao salvar: " + (data.error || "Erro desconhecido"));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Erro de conexão com o servidor.");
             }
         }
 
