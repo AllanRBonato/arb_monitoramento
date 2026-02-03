@@ -145,6 +145,20 @@
             background-color: #ecf0f1;
             color: #333;
         }
+
+        /* --- CORREÇÃO DO CELULAR --- */
+        .table-responsive {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid #ddd;
+        }
+        
+        table {
+            min-width: 600px;
+        }
     </style>
 </head>
 
@@ -260,6 +274,7 @@
         let editingUserId = null;
         const token = localStorage.getItem('token');
         const myRole = localStorage.getItem('userRole');
+        const mySector = localStorage.getItem('userSector');
 
         if (!token) { window.location.href = 'login.html'; }
         else {
@@ -309,15 +324,28 @@
                 const tbody = document.querySelector('#usersTable tbody');
                 tbody.innerHTML = '';
 
-                if (users.length === 0) {
+                // --- FILTRO DE SEGURANÇA ---
+                const usuariosFiltrados = users.filter(u => {
+                    if (myRole === 'ADMIN_MASTER') return true;
+
+                    if (u.sector !== mySector) return false;
+
+                    let cargoUser = u.role || u.roleName || '';
+                    if (typeof cargoUser === 'object') cargoUser = cargoUser.name; 
+                    if (cargoUser === 'ADMIN_MASTER') return false;
+
+                    return true;
+                });
+
+                if (usuariosFiltrados.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" align="center">Nenhum usuário encontrado.</td></tr>';
                     return;
                 }
 
-                users.forEach(u => {
+                usuariosFiltrados.forEach(u => {
                     let rawRole = u.role || u.roleName || '';
-                    const cargo = rawRole.toUpperCase();
-                    const label = u.roleLabel || '';
+                    const cargo = (typeof rawRole === 'string' ? rawRole : rawRole.name).toUpperCase();
+                    const label = u.roleLabel || (rawRole.label ? rawRole.label : '');
 
                     let badgeBg = '#ecf0f1';
                     let badgeColor = '#2c3e50';
@@ -367,9 +395,16 @@
                 const alertBox = document.getElementById('passwordAlerts');
                 const list = document.getElementById('requestsList');
                 list.innerHTML = '';
-                if (requests.length > 0) {
+                
+                // Filtra pedidos: Admin vê tudo, Full vê só do setor
+                const pedidosFiltrados = requests.filter(req => {
+                    if (myRole === 'ADMIN_MASTER') return true;
+                    return req.user.sector.name === mySector;
+                });
+
+                if (pedidosFiltrados.length > 0) {
                     alertBox.style.display = 'block';
-                    requests.forEach(req => {
+                    pedidosFiltrados.forEach(req => {
                         list.innerHTML += `<div style="background:white; padding:10px; border-radius:6px; border:1px solid #e2e3e5; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div><strong>${req.user.name}</strong> (${req.user.email})<br><small>Setor: ${req.user.sector.name}</small></div><button class="btn-primary" style="width:auto; font-size:0.8rem;" onclick="resolverPedido('${req.id}', '${req.user.id}', '${req.user.name}')">Alterar Senha</button></div>`;
                     });
                 } else {
@@ -508,10 +543,18 @@
                 if (rolesRes.status === 401 || sectorsRes.status === 401) return;
                 const roles = await rolesRes.json();
                 const sectors = await sectorsRes.json();
+                
+                // --- FILTRO DE SEGURANÇA: ESCONDE ADMIN_MASTER ---
                 if (Array.isArray(roles)) {
                     roleSelect.innerHTML = '<option value="">Selecione...</option>';
-                    roles.forEach(r => roleSelect.innerHTML += `<option value="${r.name}">${r.name} (${r.label})</option>`);
+                    roles.forEach(r => {
+                        // Se não sou ADMIN_MASTER, não posso selecionar ADMIN_MASTER
+                        if (myRole !== 'ADMIN_MASTER' && r.name === 'ADMIN_MASTER') return;
+                        
+                        roleSelect.innerHTML += `<option value="${r.name}">${r.name} (${r.label})</option>`;
+                    });
                 }
+
                 if (Array.isArray(sectors)) {
                     sectorSelect.innerHTML = '<option value="">Selecione...</option>';
                     sectors.forEach(s => sectorSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`);
