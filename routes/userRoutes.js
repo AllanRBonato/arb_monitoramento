@@ -77,7 +77,7 @@ router.get('/me', async (req, res) => {
     }
 });
 
-// 3. LISTAR USUÁRIOS
+// 3. LISTAR USUÁRIOS (Rota Corrigida e Segura)
 router.get('/', async (req, res) => {
     try {
         const requester = await getRequester(req);
@@ -87,10 +87,11 @@ router.get('/', async (req, res) => {
             return res.status(403).json({ error: "Você não tem permissão para listar usuários." });
         }
 
-        // REGRA DE FILTRO
         let whereClause = {};
         if (requester.role.level < 100) {
-            whereClause = { sectorId: requester.sectorId };
+            whereClause = {
+                sectorId: requester.sectorId
+            };
         }
 
         const users = await prisma.user.findMany({
@@ -101,25 +102,14 @@ router.get('/', async (req, res) => {
                 email: true,
                 phone: true,
                 avatar: true,
-                viewProjectId: true,
-                createdAt: true, // Opcional
                 role: { 
-                    select: { 
-                        name: true, 
-                        label: true, 
-                        level: true 
-                    } 
+                    select: { name: true, label: true, level: true } 
                 },
                 sector: { 
-                    select: { 
-                        name: true 
-                    } 
+                    select: { name: true } 
                 },
-                viewProjects: {
-                    select: {
-                        id: true,
-                        name: true
-                    }
+                viewProjects: { 
+                    select: { id: true, name: true } 
                 }
             },
             orderBy: { name: 'asc' }
@@ -136,7 +126,7 @@ router.get('/', async (req, res) => {
         res.json(formatted);
     } catch (e) { 
         console.error(e);
-        res.status(500).json({ error: "Erro interno de segurança." }); 
+        res.status(500).json({ error: e.message }); 
     }
 });
 
