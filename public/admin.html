@@ -82,7 +82,6 @@
             color: #3498db;
         }
 
-        /* Estilos de badges */
         .role-badge {
             font-weight: bold;
             padding: 4px 8px;
@@ -151,13 +150,36 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            overflow-x: auto; 
+            overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             border: 1px solid #ddd;
         }
-        
+
         table {
             min-width: 600px;
+        }
+
+        /* Alteração feita aqui: ----- */
+        th,
+        td {
+            white-space: nowrap;
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+
+        td input {
+            min-width: 150px;
+        }
+
+        .action-btn {
+            font-size: 1.3rem !important;
+            padding: 8px 12px !important;
+            margin: 0 2px;
+        }
+
+        td:last-child {
+            min-width: 100px;
+            text-align: center;
         }
     </style>
 </head>
@@ -331,7 +353,7 @@
                     if (u.sector !== mySector) return false;
 
                     let cargoUser = u.role || u.roleName || '';
-                    if (typeof cargoUser === 'object') cargoUser = cargoUser.name; 
+                    if (typeof cargoUser === 'object') cargoUser = cargoUser.name;
                     if (cargoUser === 'ADMIN_MASTER') return false;
 
                     return true;
@@ -395,7 +417,7 @@
                 const alertBox = document.getElementById('passwordAlerts');
                 const list = document.getElementById('requestsList');
                 list.innerHTML = '';
-                
+
                 // Filtra pedidos: Admin vê tudo, Full vê só do setor
                 const pedidosFiltrados = requests.filter(req => {
                     if (myRole === 'ADMIN_MASTER') return true;
@@ -543,14 +565,14 @@
                 if (rolesRes.status === 401 || sectorsRes.status === 401) return;
                 const roles = await rolesRes.json();
                 const sectors = await sectorsRes.json();
-                
+
                 // --- FILTRO DE SEGURANÇA: ESCONDE ADMIN_MASTER ---
                 if (Array.isArray(roles)) {
                     roleSelect.innerHTML = '<option value="">Selecione...</option>';
                     roles.forEach(r => {
                         // Se não sou ADMIN_MASTER, não posso selecionar ADMIN_MASTER
                         if (myRole !== 'ADMIN_MASTER' && r.name === 'ADMIN_MASTER') return;
-                        
+
                         roleSelect.innerHTML += `<option value="${r.name}">${r.name} (${r.label})</option>`;
                     });
                 }
