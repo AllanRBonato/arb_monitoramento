@@ -33,6 +33,19 @@ body {
     /* <--- FONTE MENOR GERAL */
 }
 
+/* Força a tabela a ter barra de rolagem no celular em vez de esconder */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Permite rolar para o lado */
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+}
+
+/* Garante que a tabela tenha um tamanho mínimo para não espremer */
+table {
+    min-width: 600px; /* Ajuste conforme a necessidade */
+}
+
 /* =======================================================
     2. COMPONENTES GERAIS
    ======================================================= */
