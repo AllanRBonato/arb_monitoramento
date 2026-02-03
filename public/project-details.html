@@ -1,14 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
+
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalhes do Projeto</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        html, body {
-            margin: 0; padding: 0;
+        html,
+        body {
+            margin: 0;
+            padding: 0;
             background-color: #f4f6f9;
             font-family: 'Inter', sans-serif;
             color: #333;
@@ -18,42 +28,92 @@
             overflow: hidden;
         }
 
-        nav { 
-            position: fixed !important; top: 0; left: 0; width: 100%; 
-            z-index: 9999 !important; height: 50px; 
+        nav {
+            position: fixed !important;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 9999 !important;
+            height: 50px;
         }
 
         .project-toolbar {
             background-color: #2c3e50;
             color: white;
-            padding: 0; 
-            height: 65px; 
+            padding: 0;
+            height: 65px;
             width: 100%;
             margin-top: 50px;
             flex-shrink: 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             position: relative;
             z-index: 100;
             display: flex;
             align-items: center;
         }
-        .toolbar-container { width: 99%; max-width: 1800px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-        .toolbar-left { display: flex; align-items: center; gap: 10px; }
-        
-        .btn-back { 
-            color: #ecf0f1; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 5px; 
-            background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); 
-            transition: 0.2s; font-size: 0.8rem; height: 28px; /* Altura fixa do botão */
+
+        .toolbar-container {
+            width: 99%;
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .btn-back:hover { background: rgba(255,255,255,0.2); }
-        
-        .project-info h1 { margin: 0; font-size: 1rem; font-weight: 700; color: white; line-height: 1; }
-        
-        .btn-update { 
-            background-color: #27ae60; color: white; border: none; padding: 0 15px; height: 28px;
-            border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .btn-update:hover { background-color: #219150; }
+
+        .btn-back {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: 0.2s;
+            font-size: 0.8rem;
+            height: 28px;
+            /* Altura fixa do botão */
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .project-info h1 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1;
+        }
+
+        .btn-update {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 0 15px;
+            height: 28px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-update:hover {
+            background-color: #219150;
+        }
 
         .main-layout {
             display: flex;
@@ -62,104 +122,347 @@
             width: 98%;
             max-width: 1800px;
             margin: 5px auto;
-            overflow: hidden; 
+            overflow: hidden;
             gap: 5px;
         }
 
-        .tech-card { 
-            background: white; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
-            border: 1px solid #ddd; 
-            display: grid; grid-template-columns: 1fr 1fr;
+        .tech-card {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             flex-shrink: 0;
             font-size: 0.8rem;
             padding: 0;
         }
-        .tech-col { padding: 6px 15px; } 
-        .tech-col:first-child { border-right: 1px solid #eee; }
-        
-        .tech-title { 
-            margin: 0 0 2px 0; color: #3498db; font-size: 0.7rem; font-weight: 700; 
-            text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 2px; 
-        }
-        .data-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-        .data-value { font-weight: 600; color: #2c3e50; font-family: monospace; }
-        .badge-res { padding: 0 5px; border-radius: 3px; font-size: 0.7rem; font-weight: bold; }
-        .bg-cpu { background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
-        .bg-uptime { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
 
-        .filters-bar { display: flex; gap: 8px; align-items: center; }
-        .filter-input { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem; width: 200px; }
-        .filter-select { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem; background: white; cursor: pointer; }
+        .tech-col {
+            padding: 6px 15px;
+        }
+
+        .tech-col:first-child {
+            border-right: 1px solid #eee;
+        }
+
+        .tech-title {
+            margin: 0 0 2px 0;
+            color: #3498db;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 2px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .data-value {
+            font-weight: 600;
+            color: #2c3e50;
+            font-family: monospace;
+        }
+
+        .badge-res {
+            padding: 0 5px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .bg-cpu {
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #bbdefb;
+        }
+
+        .bg-uptime {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .filters-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-input {
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            width: 200px;
+        }
+
+        .filter-select {
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            background: white;
+            cursor: pointer;
+        }
 
         .table-wrapper {
             display: flex;
             flex-direction: column;
-            flex-grow: 1; 
+            flex-grow: 1;
             background: white;
             border-radius: 4px;
             border: 1px solid #ddd;
             overflow: hidden;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             margin-bottom: 5px;
         }
 
-        .section-header { 
-            padding: 6px 15px; background: #fff; border-bottom: 1px solid #e9ecef; flex-shrink: 0; 
-            display: flex; justify-content: space-between; align-items: center; height: 40px;
+        .section-header {
+            padding: 6px 15px;
+            background: #fff;
+            border-bottom: 1px solid #e9ecef;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 40px;
         }
-        .section-header h3 { margin: 0; color: #2c3e50; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
 
-        .table-scroll { flex: 1; overflow-y: auto; min-height: 0; }
-
-        table.nat-table { width: 100%; border-collapse: collapse; }
-        
-        .nat-table th { 
-            background: #f8f9fa; color: #555; font-weight: 700; font-size: 0.75rem; 
-            padding: 8px 15px; text-align: left; border-bottom: 1px solid #ddd; 
-            position: sticky; top: 0; z-index: 10; 
+        .section-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
         }
-        
-        .nat-table td { 
-            padding: 5px 15px; border-bottom: 1px solid #eee; 
-            font-size: 0.85rem; color: #333; vertical-align: middle; 
-        }
-        .nat-table tr:hover { background-color: #f1f8ff; }
 
-        .status-pill { 
-            padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; font-weight: bold; 
-            text-transform: uppercase; display: inline-block; min-width: 70px; text-align: center; 
+        .table-scroll {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
         }
-        .sp-loading { background: #e9ecef; color: #666; border: 1px solid #ddd; }
-        .sp-online { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .sp-offline { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .sp-partial { background: #fff3cd; color: #d35400; border: 1px solid #ffeeba; }
-        
-        .btn-view-ips { 
-            background: white; border: 1px solid #ccc; color: #555; padding: 3px 10px; 
-            border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 0.75rem; transition:0.2s; 
+
+        table.nat-table {
+            width: 100%;
+            border-collapse: collapse;
         }
-        .btn-view-ips:hover { background: #3498db; color: white; border-color: #3498db; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; z-index: 10000; }
-        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 95%; max-width: 650px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; max-height: 85vh; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; flex-shrink: 0; }
-        .close-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #999; }
-        .modal-body { overflow-y: auto; padding: 5px; flex: 1; }
-        .btn-modal-close { background-color: #6c757d; color: white; border: none; padding: 6px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        .nat-table th {
+            background: #f8f9fa;
+            color: #555;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 8px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
 
-        .ip-group-row { background: #fcfcfc; border: 1px solid #eee; padding: 8px 12px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .ip-main { font-family: monospace; font-size: 0.95rem; font-weight: bold; color: #2c3e50; }
-        .port-tag { background: #e9ecef; padding: 1px 4px; border-radius: 3px; border: 1px solid #ddd; margin-right: 5px; font-size: 0.7rem; font-family: monospace; }
-        
-        .mac-info { display: block; font-family: monospace; font-size: 0.75rem; color: #27ae60; font-weight: bold; margin-top: 2px; }
-        .status-text { display: block; font-size: 0.75rem; color: #e74c3c; margin-top: 1px; font-style: italic; }
-        
-        .badge-modal { padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: bold; }
-        .bm-loading { background: #e9ecef; color: #666; }
-        .bm-on { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .bm-off { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .nat-table td {
+            padding: 5px 15px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.85rem;
+            color: #333;
+            vertical-align: middle;
+        }
+
+        .nat-table tr:hover {
+            background-color: #f1f8ff;
+        }
+
+        .status-pill {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: inline-block;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .sp-loading {
+            background: #e9ecef;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+
+        .sp-online {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .sp-offline {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .sp-partial {
+            background: #fff3cd;
+            color: #d35400;
+            border: 1px solid #ffeeba;
+        }
+
+        .btn-view-ips {
+            background: white;
+            border: 1px solid #ccc;
+            color: #555;
+            padding: 3px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.75rem;
+            transition: 0.2s;
+        }
+
+        .btn-view-ips:hover {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 95%;
+            max-width: 650px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            max-height: 85vh;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+            flex-shrink: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            padding: 5px;
+            flex: 1;
+        }
+
+        .btn-modal-close {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 6px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .ip-group-row {
+            background: #fcfcfc;
+            border: 1px solid #eee;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ip-main {
+            font-family: monospace;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .port-tag {
+            background: #e9ecef;
+            padding: 1px 4px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+            margin-right: 5px;
+            font-size: 0.7rem;
+            font-family: monospace;
+        }
+
+        .mac-info {
+            display: block;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #27ae60;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+
+        .status-text {
+            display: block;
+            font-size: 0.75rem;
+            color: #e74c3c;
+            margin-top: 1px;
+            font-style: italic;
+        }
+
+        .badge-modal {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .bm-loading {
+            background: #e9ecef;
+            color: #666;
+        }
+
+        .bm-on {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .bm-off {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
     </style>
 </head>
+
 <body>
 
     <script src="navbar.js"></script>
@@ -168,7 +471,9 @@
         <div class="toolbar-container">
             <div class="toolbar-left">
                 <a href="dashboard.html" class="btn-back">⬅ Voltar</a>
-                <div class="project-info"><h1 id="projName">Carregando...</h1></div>
+                <div class="project-info">
+                    <h1 id="projName">Carregando...</h1>
+                </div>
             </div>
             <div>
                 <button class="btn-update" onclick="carregarTudo()">🔄 Atualizar</button>
@@ -177,14 +482,16 @@
     </div>
 
     <div class="main-layout">
-        
+
         <div class="tech-card">
             <div class="tech-col">
                 <h4 class="tech-title">📡 Status da RB</h4>
                 <div class="data-row"><span>IP Conexão</span><span class="data-value" id="projIp">...</span></div>
                 <div class="data-row"><span>Porta Winbox</span><span class="data-value" id="projWinbox">...</span></div>
-                <div class="data-row"><span>CPU</span><span class="data-value"><span class="badge-res bg-cpu" id="rbCpu">...</span></span></div>
-                <div class="data-row"><span>Uptime</span><span class="data-value"><span class="badge-res bg-uptime" id="rbUptime">...</span></span></div>
+                <div class="data-row"><span>CPU</span><span class="data-value"><span class="badge-res bg-cpu"
+                            id="rbCpu">...</span></span></div>
+                <div class="data-row"><span>Uptime</span><span class="data-value"><span class="badge-res bg-uptime"
+                            id="rbUptime">...</span></span></div>
             </div>
             <div class="tech-col">
                 <h4 class="tech-title">🏢 Informações</h4>
@@ -197,7 +504,8 @@
             <div class="section-header">
                 <h3>📦 Monitoramento</h3>
                 <div class="filters-bar">
-                    <input type="text" id="searchFilter" class="filter-input" placeholder="🔍 Buscar nome..." onkeyup="aplicarFiltros()">
+                    <input type="text" id="searchFilter" class="filter-input" placeholder="🔍 Buscar nome..."
+                        onkeyup="aplicarFiltros()">
                     <select id="statusFilter" class="filter-select" onchange="aplicarFiltros()">
                         <option value="all">Todos</option>
                         <option value="online">Online</option>
@@ -206,12 +514,19 @@
                     </select>
                 </div>
             </div>
-            
+
             <div id="loadingNat" style="text-align:center; padding:20px; color:#777;">⏳ Conectando...</div>
-            
+
             <div class="table-scroll" id="tableContainer" style="display:none;">
                 <table class="nat-table">
-                    <thead><tr><th style="width: 100px; text-align:center;">Status</th><th>Cliente / Descrição</th><th>IPs Monitorados</th><th style="text-align: right;">Ações</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th style="width: 100px; text-align:center;">Status</th>
+                            <th>Cliente / Descrição</th>
+                            <th>IPs Monitorados</th>
+                            <th style="text-align: right;">Ações</th>
+                        </tr>
+                    </thead>
                     <tbody id="natTableBody"></tbody>
                 </table>
             </div>
@@ -221,12 +536,17 @@
 
     <div id="modalIps" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header"><h3 id="modalTitle">Detalhes</h3><button class="close-btn" onclick="fecharModalIps()">×</button></div>
+            <div class="modal-header">
+                <h3 id="modalTitle">Detalhes</h3><button class="close-btn" onclick="fecharModalIps()">×</button>
+            </div>
             <div style="margin-bottom: 10px; flex-shrink: 0;">
-                <button id="btnPingModal" onclick="pingarTodosDoModal()" style="width:100%; padding:8px; background:#3498db; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">⚡ Checar ARP & Ping</button>
+                <button id="btnPingModal" onclick="pingarTodosDoModal()"
+                    style="width:100%; padding:8px; background:#3498db; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">⚡
+                    Checar ARP & Ping</button>
             </div>
             <div class="modal-body" id="modalIpList"></div>
-            <div style="text-align:right; margin-top:10px; border-top:1px solid #eee; padding-top:10px; flex-shrink: 0;">
+            <div
+                style="text-align:right; margin-top:10px; border-top:1px solid #eee; padding-top:10px; flex-shrink: 0;">
                 <button class="btn-modal-close" onclick="fecharModalIps()">Fechar</button>
             </div>
         </div>
@@ -243,8 +563,8 @@
 
         if (!token || !projectId) window.location.href = 'dashboard.html';
         else {
-            if(typeof criarNavbar === 'function') criarNavbar('Detalhes');
-            document.body.style.display = 'flex'; 
+            if (typeof criarNavbar === 'function') criarNavbar('Detalhes');
+            document.body.style.display = 'flex';
             carregarTudo();
             setInterval(carregarRecursosRB, 20000);
         }
@@ -269,12 +589,12 @@
         async function carregarRecursosRB() {
             try {
                 const res = await fetch(`/api/projects/${projectId}/resources`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if(res.ok) {
+                if (res.ok) {
                     const data = await res.json();
                     document.getElementById('rbCpu').innerText = (data.cpu !== undefined) ? data.cpu + "%" : "-";
                     document.getElementById('rbUptime').innerText = data.uptime || "-";
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         async function carregarGruposNAT() {
@@ -283,14 +603,14 @@
             try {
                 const res = await fetch(`/api/projects/${projectId}/nat`, { headers: { 'Authorization': `Bearer ${token}` } });
                 const groups = await res.json();
-                
+
                 globalGroups = groups.map((g, i) => ({ ...g, originalIndex: i }));
-                
+
                 document.getElementById('loadingNat').style.display = 'none';
                 document.getElementById('tableContainer').style.display = 'block';
-                
+
                 aplicarFiltros();
-                
+
                 checkQueue = globalGroups.map((_, idx) => idx);
                 processCheckQueue();
 
@@ -303,7 +623,7 @@
 
             const filtrados = globalGroups.filter(group => {
                 const nomeMatch = group.name.toLowerCase().includes(termo);
-                
+
                 let statusCalc = 'offline';
                 const total = group.ips.length;
                 const onlineCount = group.ips.filter(i => i.isOnline).length;
@@ -319,7 +639,7 @@
                 let statusMatch = false;
                 if (statusFiltro === 'all') statusMatch = true;
                 else if (statusFiltro === statusCalc) statusMatch = true;
-                
+
                 return nomeMatch && statusMatch;
             });
 
@@ -338,20 +658,20 @@
             lista.forEach(group => {
                 let badgeClass = 'sp-loading';
                 let badgeText = '...';
-                
+
                 const total = group.ips.length;
                 const onlineCount = group.ips.filter(i => i.isOnline).length;
                 const offlineCount = total - onlineCount;
                 const jaVerificado = group.ips.some(i => i.mac || i.status);
 
                 if (jaVerificado) {
-                    if (onlineCount === total) { 
-                        badgeClass = 'sp-online'; badgeText = 'ONLINE'; 
-                    } else if (onlineCount === 0) { 
-                        badgeClass = 'sp-offline'; badgeText = 'OFFLINE'; 
-                    } else { 
+                    if (onlineCount === total) {
+                        badgeClass = 'sp-online'; badgeText = 'ONLINE';
+                    } else if (onlineCount === 0) {
+                        badgeClass = 'sp-offline'; badgeText = 'OFFLINE';
+                    } else {
                         // MUDANÇA AQUI: Mostra quantos estão OFF
-                        badgeClass = 'sp-partial'; badgeText = `${offlineCount} OFF`; 
+                        badgeClass = 'sp-partial'; badgeText = `${offlineCount} OFF`;
                     }
                 }
 
@@ -371,9 +691,9 @@
             isProcessingQueue = true;
             const batchIndices = checkQueue.splice(0, 5);
 
-            batchIndices.forEach(idx => { 
-                const b = document.getElementById(`status-badge-${idx}`); 
-                if(b) { b.innerText = "..."; b.className = "status-pill sp-loading"; } 
+            batchIndices.forEach(idx => {
+                const b = document.getElementById(`status-badge-${idx}`);
+                if (b) { b.innerText = "..."; b.className = "status-pill sp-loading"; }
             });
 
             const allIps = [];
@@ -389,10 +709,10 @@
 
                 batchIndices.forEach(idx => {
                     const group = globalGroups[idx];
-                    
+
                     group.ips.forEach(gIp => {
                         const result = results[gIp.ip];
-                        if(result) {
+                        if (result) {
                             gIp.isOnline = result.online;
                             gIp.latency = result.ms;
                             gIp.mac = result.mac;
@@ -405,13 +725,13 @@
                         const total = group.ips.length;
                         const onlineCount = group.ips.filter(i => i.isOnline).length;
                         const offlineCount = total - onlineCount;
-                        
-                        if (onlineCount === total) { 
-                            badge.className = 'status-pill sp-online'; badge.innerText = 'ONLINE'; 
-                        } else if (onlineCount === 0) { 
-                            badge.className = 'status-pill sp-offline'; badge.innerText = 'OFFLINE'; 
-                        } else { 
-                            badge.className = 'status-pill sp-partial'; badge.innerText = `${offlineCount} OFF`; 
+
+                        if (onlineCount === total) {
+                            badge.className = 'status-pill sp-online'; badge.innerText = 'ONLINE';
+                        } else if (onlineCount === 0) {
+                            badge.className = 'status-pill sp-offline'; badge.innerText = 'OFFLINE';
+                        } else {
+                            badge.className = 'status-pill sp-partial'; badge.innerText = `${offlineCount} OFF`;
                         }
                     }
                 });
@@ -432,12 +752,12 @@
             const group = globalGroups[currentGroupIndex];
             const list = document.getElementById('modalIpList');
             list.innerHTML = '';
-            
+
             const grouped = {};
             group.ips.forEach(item => {
-                if(!grouped[item.ip]) grouped[item.ip] = { ports: [], online: item.isOnline, latency: item.latency, mac: item.mac, status: item.status };
+                if (!grouped[item.ip]) grouped[item.ip] = { ports: [], online: item.isOnline, latency: item.latency, mac: item.mac, status: item.status };
                 grouped[item.ip].ports.push(item.port);
-                if(item.isOnline) { grouped[item.ip].online = true; grouped[item.ip].latency = item.latency; grouped[item.ip].mac = item.mac; grouped[item.ip].status = item.status; }
+                if (item.isOnline) { grouped[item.ip].online = true; grouped[item.ip].latency = item.latency; grouped[item.ip].mac = item.mac; grouped[item.ip].status = item.status; }
             });
 
             Object.keys(grouped).forEach(ip => {
@@ -445,9 +765,9 @@
                 let statusHtml = '';
                 let extraInfo = '';
 
-                if(isTesting) {
+                if (isTesting) {
                     statusHtml = `<span class="badge-modal bm-loading">...</span>`;
-                } else if(data.online) {
+                } else if (data.online) {
                     statusHtml = `<span class="badge-modal bm-on">ON</span>`;
                     extraInfo = `<span class="mac-info">MAC: ${data.mac || 'N/A'} <small style="color:#555">(${data.latency})</small></span>`;
                 } else {
@@ -479,20 +799,20 @@
                 const results = await res.json();
                 group.ips.forEach(item => {
                     const result = results[item.ip];
-                    if(result) { item.isOnline = result.online; item.latency = result.ms; item.mac = result.mac; item.status = result.status; }
+                    if (result) { item.isOnline = result.online; item.latency = result.ms; item.mac = result.mac; item.status = result.status; }
                 });
-                
+
                 const groupUniqueIps = [...new Set(group.ips.map(i => i.ip))];
                 let offlineCount = 0;
-                groupUniqueIps.forEach(ip => { if(group.ips.find(g => g.ip === ip && !g.isOnline)) offlineCount++; });
-                
+                groupUniqueIps.forEach(ip => { if (group.ips.find(g => g.ip === ip && !g.isOnline)) offlineCount++; });
+
                 const badge = document.getElementById(`status-badge-${currentGroupIndex}`);
-                if(badge) {
+                if (badge) {
                     if (offlineCount === 0) { badge.className = 'status-pill sp-online'; badge.innerText = 'ONLINE'; }
                     else if (offlineCount === groupUniqueIps.length) { badge.className = 'status-pill sp-offline'; badge.innerText = 'OFFLINE'; }
                     else { badge.className = 'status-pill sp-partial'; badge.innerText = `${offlineCount} OFF`; }
                 }
-            } catch(e) {}
+            } catch (e) { }
             renderizarListaModal(false);
             btn.disabled = false; btn.innerText = "⚡ Checar ARP & Ping";
         }
@@ -500,4 +820,5 @@
         function fecharModalIps() { document.getElementById('modalIps').style.display = 'none'; }
     </script>
 </body>
+
 </html>

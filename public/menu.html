@@ -1,15 +1,23 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
+
+    <script>
+        if (!localStorage.getItem('token')) {
+            window.location.href = 'login.html';
+        }
+    </script>
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minhas Notas - ARB Monitoramento</title>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="css/style.css">
-    
+
     <style>
         body {
-            overflow: hidden; 
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             height: 100vh;
@@ -17,7 +25,7 @@
 
         .app-container {
             display: flex;
-            height: calc(100vh - 80px); 
+            height: calc(100vh - 80px);
             width: 100%;
             padding: 20px;
             gap: 20px;
@@ -33,7 +41,7 @@
             border-radius: 8px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             height: 100%;
         }
 
@@ -47,11 +55,11 @@
             border-radius: 8px 8px 0 0;
             flex-shrink: 0;
         }
-        
-        .notes-list { 
+
+        .notes-list {
             flex: 1;
             overflow-y: auto;
-            padding: 10px; 
+            padding: 10px;
         }
 
 
@@ -64,25 +72,54 @@
             transition: 0.2s;
             background: white;
             border: 1px solid transparent;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
-        .note-item:hover { transform: translateY(-2px); box-shadow: 0 3px 5px rgba(0,0,0,0.1); border-color: #bdc3c7;}
-        .note-item.active { background-color: #e3f2fd; border-color: #3498db; }
 
-        .note-row-top { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .note-title { font-weight: 700; color: #2c3e50; font-size: 0.95rem; }
-        .note-date { font-size: 0.8rem; color: #7f8c8d; display: flex; align-items: center; gap: 5px;}
-
-        .note-item.overdue { 
-            border-left: 5px solid #e74c3c; 
-            background: #fff5f5; 
+        .note-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+            border-color: #bdc3c7;
         }
-        .note-item.overdue .note-date { color: #c0392b; font-weight: bold; }
-        
-        .note-item.completed { 
-            opacity: 0.6; 
-            text-decoration: line-through; 
-            border-left: 5px solid #27ae60; 
+
+        .note-item.active {
+            background-color: #e3f2fd;
+            border-color: #3498db;
+        }
+
+        .note-row-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .note-title {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 0.95rem;
+        }
+
+        .note-date {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .note-item.overdue {
+            border-left: 5px solid #e74c3c;
+            background: #fff5f5;
+        }
+
+        .note-item.overdue .note-date {
+            color: #c0392b;
+            font-weight: bold;
+        }
+
+        .note-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+            border-left: 5px solid #27ae60;
             background-color: #f0fff4;
         }
 
@@ -92,19 +129,21 @@
             background: white;
             border: 1px solid #bdc3c7;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             display: flex;
             flex-direction: column;
             height: 100%;
             overflow: hidden;
         }
 
-        .editor-header { 
-            padding: 15px 20px; 
-            border-bottom: 1px solid #eee; 
+        .editor-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
             background: #fdfdfd;
             flex-shrink: 0;
-            display: flex; align-items: center; gap: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         #noteForm {
@@ -115,8 +154,15 @@
             overflow-y: auto;
         }
 
-        .form-row { display: flex; gap: 20px; margin-bottom: 15px; }
-        .col { flex: 1; }
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .col {
+            flex: 1;
+        }
 
 
         .form-group-content {
@@ -147,32 +193,98 @@
         }
 
         .btn-add-mini {
-            background-color: var(--success-color); color: white; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
         }
-        .btn-add-mini:hover { transform: scale(1.1); }
 
-        .color-picker { display: flex; gap: 10px; align-items: center; height: 38px;}
-        .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 3px solid white; box-shadow: 0 0 0 1px #ccc; transition: 0.2s;}
-        .color-dot:hover { transform: scale(1.1); }
-        .color-dot.selected { transform: scale(1.2); box-shadow: 0 0 0 2px #333; }
-        .bg-blue { background: #3498db; } .bg-green { background: #27ae60; }
-        .bg-yellow { background: #f1c40f; } .bg-red { background: #e74c3c; }
+        .btn-add-mini:hover {
+            transform: scale(1.1);
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            height: 38px;
+        }
+
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 0 0 1px #ccc;
+            transition: 0.2s;
+        }
+
+        .color-dot:hover {
+            transform: scale(1.1);
+        }
+
+        .color-dot.selected {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 2px #333;
+        }
+
+        .bg-blue {
+            background: #3498db;
+        }
+
+        .bg-green {
+            background: #27ae60;
+        }
+
+        .bg-yellow {
+            background: #f1c40f;
+        }
+
+        .bg-red {
+            background: #e74c3c;
+        }
 
         /* Responsividade */
         @media (max-width: 900px) {
-            .app-container { flex-direction: column; height: auto; overflow-y: auto; }
-            body { overflow: auto; } /* No celular, deixa rolar normal */
-            .sidebar { width: 100%; height: 300px; margin-bottom: 20px; }
-            .main-editor { height: auto; min-height: 500px; }
+            .app-container {
+                flex-direction: column;
+                height: auto;
+                overflow-y: auto;
+            }
+
+            body {
+                overflow: auto;
+            }
+
+            /* No celular, deixa rolar normal */
+            .sidebar {
+                width: 100%;
+                height: 300px;
+                margin-bottom: 20px;
+            }
+
+            .main-editor {
+                height: auto;
+                min-height: 500px;
+            }
         }
     </style>
 </head>
+
 <body style="display: none;">
 
     <script src="navbar.js"></script>
 
     <div class="app-container">
-        
+
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h3><i class="ph ph-notebook" style="margin-right:8px;"></i> Minhas Notas</h3>
@@ -190,12 +302,13 @@
                 <i class="ph-duotone ph-note-pencil" style="font-size: 1.8rem; color: var(--primary-color);"></i>
                 <h2 id="editorTitle" style="margin:0; margin-left: 10px;">Nova Nota</h2>
             </div>
-            
+
             <form id="noteForm" onsubmit="salvarNota(event)">
-                
+
                 <div class="form-group">
                     <label>Título da Nota</label>
-                    <input type="text" id="title" placeholder="Ex: Relatório Mensal..." required style="font-weight:bold; font-size:1.1rem;">
+                    <input type="text" id="title" placeholder="Ex: Relatório Mensal..." required
+                        style="font-weight:bold; font-size:1.1rem;">
                 </div>
 
                 <div class="form-row">
@@ -228,17 +341,20 @@
                 </div>
 
                 <div class="editor-footer">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:1rem; color:#2c3e50;">
-                        <input type="checkbox" id="isCompleted" style="width:20px; height:20px;"> 
+                    <label
+                        style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; font-size:1rem; color:#2c3e50;">
+                        <input type="checkbox" id="isCompleted" style="width:20px; height:20px;">
                         Marcar como Concluído
                     </label>
-                    
+
                     <div style="display:flex; gap:10px;">
-                        <button type="button" class="btn-danger" id="btnDelete" onclick="deletarNota()" style="width:auto; display:none; padding:10px 20px;">
+                        <button type="button" class="btn-danger" id="btnDelete" onclick="deletarNota()"
+                            style="width:auto; display:none; padding:10px 20px;">
                             <i class="ph ph-trash" style="margin-right:5px;"></i> Excluir
                         </button>
-                        
-                        <button type="submit" class="btn-success" style="width:auto; padding:10px 25px; font-size:1rem;">
+
+                        <button type="submit" class="btn-success"
+                            style="width:auto; padding:10px 25px; font-size:1rem;">
                             <i class="ph ph-floppy-disk" style="margin-right:5px;"></i> Salvar Nota
                         </button>
                     </div>
@@ -247,109 +363,109 @@
         </main>
     </div>
 
-<script>
-    const token = localStorage.getItem('token');
-    let notes = [];
-    let currentColor = 'blue';
-    let currentId = null; 
+    <script>
+        const token = localStorage.getItem('token');
+        let notes = [];
+        let currentColor = 'blue';
+        let currentId = null;
 
-    if (!token) { window.location.href = 'login.html'; }
-    else {
-        criarNavbar('Minhas Notas');
-        carregarNotasDoServidor();
-    }
-
-    async function carregarNotasDoServidor() {
-        try {
-            const res = await fetch('/api/notes', { headers: { 'Authorization': `Bearer ${token}` } });
-            if(res.ok) {
-                notes = await res.json();
-                renderList();
-            }
-        } catch (e) { console.error(e); }
-    }
-
-    async function salvarNota(e) {
-        e.preventDefault();
-        const payload = {
-            title: document.getElementById('title').value,
-            content: document.getElementById('content').value,
-            dueDate: document.getElementById('dueDate').value,
-            importance: document.getElementById('importance').value,
-            completed: document.getElementById('isCompleted').checked,
-            color: currentColor
-        };
-
-        const url = currentId ? `/api/notes/${currentId}` : '/api/notes';
-        const method = currentId ? 'PUT' : 'POST';
-
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-            alert('Nota Salva com Sucesso!');
-            if(!currentId) novaNota(); 
-            carregarNotasDoServidor();
-        } else {
-            alert('Erro ao salvar');
-        }
-    }
-
-    async function deletarNota() {
-        if (!currentId || !confirm('Tem certeza? Essa ação não tem volta.')) return;
-        
-        const res = await fetch(`/api/notes/${currentId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if(res.ok) {
-            novaNota();
+        if (!token) { window.location.href = 'login.html'; }
+        else {
+            criarNavbar('Minhas Notas');
             carregarNotasDoServidor();
         }
-    }
 
+        async function carregarNotasDoServidor() {
+            try {
+                const res = await fetch('/api/notes', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (res.ok) {
+                    notes = await res.json();
+                    renderList();
+                }
+            } catch (e) { console.error(e); }
+        }
 
-    function selectColor(color) {
-        currentColor = color;
-        document.querySelectorAll('.color-dot').forEach(el => el.classList.remove('selected'));
-        document.querySelector(`.bg-${color}`).classList.add('selected');
-    }
+        async function salvarNota(e) {
+            e.preventDefault();
+            const payload = {
+                title: document.getElementById('title').value,
+                content: document.getElementById('content').value,
+                dueDate: document.getElementById('dueDate').value,
+                importance: document.getElementById('importance').value,
+                completed: document.getElementById('isCompleted').checked,
+                color: currentColor
+            };
 
-    function renderList() {
-        const listEl = document.getElementById('notesList');
-        listEl.innerHTML = '';
+            const url = currentId ? `/api/notes/${currentId}` : '/api/notes';
+            const method = currentId ? 'PUT' : 'POST';
 
-        if (notes.length === 0) return listEl.innerHTML = '<div style="text-align:center; padding:30px; color:#aaa; font-style:italic;">Você ainda não tem notas.<br>Clique no + para criar.</div>';
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
 
-        notes.sort((a, b) => {
-            if (a.completed !== b.completed) return a.completed - b.completed;
-            return new Date(b.updatedAt) - new Date(a.updatedAt);
-        });
-
-        const today = new Date().toISOString().split('T')[0];
-
-        notes.forEach(note => {
-            const item = document.createElement('div');
-            let classes = 'note-item';
-            let alertHtml = '';
-
-            if (note.dueDate && note.dueDate < today && !note.completed) {
-                classes += ' overdue';
-                alertHtml = `<span style="color:#c0392b; font-weight:bold; margin-left:5px; font-size:0.8rem;"> <i class="ph-fill ph-warning"></i> Atrasado</span>`;
+            if (res.ok) {
+                alert('Nota Salva com Sucesso!');
+                if (!currentId) novaNota();
+                carregarNotasDoServidor();
+            } else {
+                alert('Erro ao salvar');
             }
-            
-            if (note.completed) classes += ' completed';
-            if (currentId === note.id) classes += ' active';
+        }
 
-            item.className = classes;
-            
-            const dateDisplay = note.dueDate ? note.dueDate.split('-').reverse().join('/') : '';
+        async function deletarNota() {
+            if (!currentId || !confirm('Tem certeza? Essa ação não tem volta.')) return;
 
-            item.innerHTML = `
+            const res = await fetch(`/api/notes/${currentId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                novaNota();
+                carregarNotasDoServidor();
+            }
+        }
+
+
+        function selectColor(color) {
+            currentColor = color;
+            document.querySelectorAll('.color-dot').forEach(el => el.classList.remove('selected'));
+            document.querySelector(`.bg-${color}`).classList.add('selected');
+        }
+
+        function renderList() {
+            const listEl = document.getElementById('notesList');
+            listEl.innerHTML = '';
+
+            if (notes.length === 0) return listEl.innerHTML = '<div style="text-align:center; padding:30px; color:#aaa; font-style:italic;">Você ainda não tem notas.<br>Clique no + para criar.</div>';
+
+            notes.sort((a, b) => {
+                if (a.completed !== b.completed) return a.completed - b.completed;
+                return new Date(b.updatedAt) - new Date(a.updatedAt);
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+
+            notes.forEach(note => {
+                const item = document.createElement('div');
+                let classes = 'note-item';
+                let alertHtml = '';
+
+                if (note.dueDate && note.dueDate < today && !note.completed) {
+                    classes += ' overdue';
+                    alertHtml = `<span style="color:#c0392b; font-weight:bold; margin-left:5px; font-size:0.8rem;"> <i class="ph-fill ph-warning"></i> Atrasado</span>`;
+                }
+
+                if (note.completed) classes += ' completed';
+                if (currentId === note.id) classes += ' active';
+
+                item.className = classes;
+
+                const dateDisplay = note.dueDate ? note.dueDate.split('-').reverse().join('/') : '';
+
+                item.innerHTML = `
                 <div class="note-row-top">
                     <span class="note-title">${note.title}</span>
                     <div style="width:12px; height:12px; border-radius:50%; background:${getHexColor(note.color)}; border:1px solid rgba(0,0,0,0.1);"></div>
@@ -359,39 +475,40 @@
                     ${alertHtml}
                 </div>
             `;
-            
-            item.onclick = () => preencherEditor(note);
-            listEl.appendChild(item);
-        });
-    }
 
-    function preencherEditor(note) {
-        currentId = note.id;
-        document.getElementById('title').value = note.title;
-        document.getElementById('content').value = note.content || '';
-        document.getElementById('dueDate').value = note.dueDate || '';
-        document.getElementById('importance').value = note.importance;
-        document.getElementById('isCompleted').checked = note.completed;
-        selectColor(note.color);
-        
-        document.getElementById('btnDelete').style.display = 'inline-flex';
-        document.getElementById('editorTitle').innerText = "Editar Nota";
-        renderList(); 
-    }
+                item.onclick = () => preencherEditor(note);
+                listEl.appendChild(item);
+            });
+        }
 
-    function novaNota() {
-        currentId = null;
-        document.getElementById('noteForm').reset();
-        document.getElementById('editorTitle').innerText = "Nova Nota";
-        selectColor('blue');
-        document.getElementById('btnDelete').style.display = 'none';
-        document.querySelectorAll('.note-item').forEach(el => el.classList.remove('active'));
-    }
+        function preencherEditor(note) {
+            currentId = note.id;
+            document.getElementById('title').value = note.title;
+            document.getElementById('content').value = note.content || '';
+            document.getElementById('dueDate').value = note.dueDate || '';
+            document.getElementById('importance').value = note.importance;
+            document.getElementById('isCompleted').checked = note.completed;
+            selectColor(note.color);
 
-    function getHexColor(name) {
-        const map = { 'blue': '#3498db', 'green': '#27ae60', 'yellow': '#f1c40f', 'red': '#e74c3c' };
-        return map[name] || '#ccc';
-    }
-</script>
+            document.getElementById('btnDelete').style.display = 'inline-flex';
+            document.getElementById('editorTitle').innerText = "Editar Nota";
+            renderList();
+        }
+
+        function novaNota() {
+            currentId = null;
+            document.getElementById('noteForm').reset();
+            document.getElementById('editorTitle').innerText = "Nova Nota";
+            selectColor('blue');
+            document.getElementById('btnDelete').style.display = 'none';
+            document.querySelectorAll('.note-item').forEach(el => el.classList.remove('active'));
+        }
+
+        function getHexColor(name) {
+            const map = { 'blue': '#3498db', 'green': '#27ae60', 'yellow': '#f1c40f', 'red': '#e74c3c' };
+            return map[name] || '#ccc';
+        }
+    </script>
 </body>
+
 </html>
