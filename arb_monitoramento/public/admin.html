@@ -3,24 +3,6 @@
 
 <head>
     <meta charset="UTF-8">
-    <script>
-        (function() {
-            const token = localStorage.getItem('token');
-            const role = localStorage.getItem('userRole');
-            
-            if (!token) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            const forbiddenRoles = ['CLIENTE', 'VISUALIZADOR', 'LEITURA', 'BEGINNER'];
-            
-            if (forbiddenRoles.includes(role)) {
-                alert("Acesso restrito a Administradores.");
-                window.location.href = 'index.html';
-            }
-        })();
-    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Usuários</title>
     <link rel="stylesheet" href="css/style.css">
