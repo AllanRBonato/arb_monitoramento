@@ -8,11 +8,12 @@ datasource db {
 }
 
 model Role {
-  id          String @id @default(uuid())
-  name        String @unique 
-  level       Int    @default(10) 
-  label       String @default("Leitura")
-  users       User[]
+  id    String @id @default(uuid())
+  name  String @unique
+  level Int    @default(10)
+  label String @default("Leitura")
+  users User[]
+
   @@map("roles")
 }
 
@@ -20,26 +21,32 @@ model Sector {
   id    String @id @default(uuid())
   name  String @unique
   users User[]
+
   @@map("sectors")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  phone     String
-  avatar    String?  @db.Text
-  
-  roleId    String
-  role      Role     @relation(fields: [roleId], references: [id])
-  sectorId  String
-  sector    Sector   @relation(fields: [sectorId], references: [id])
-  
+  id       String  @id @default(uuid())
+  email    String  @unique
+  password String
+  name     String
+  phone    String
+  avatar   String? @db.Text
+
+  viewProjectId String?
+  viewProject   Project? @relation("ProjectViewers", fields: [viewProjectId], references: [id])
+
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  sectorId String
+  sector   Sector @relation(fields: [sectorId], references: [id])
+
   notes            Note[]
   passwordRequests PasswordRequest[]
 
   createdAt DateTime @default(now())
+
   @@map("users")
 }
 
@@ -55,6 +62,7 @@ model Note {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   updatedAt  DateTime @updatedAt
   createdAt  DateTime @default(now())
+
   @@map("notes")
 }
 
@@ -64,35 +72,39 @@ model PasswordRequest {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+
   @@map("password_requests")
 }
 
 model Project {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
-  excelLink   String?  
+  excelLink   String?
 
-  rbIp        String
-  rbPort      Int      @default(8728)
-  rbWinboxPort Int     @default(8291)
-  rbUser      String
-  rbPassword  String
+  rbIp         String
+  rbPort       Int    @default(8728)
+  rbWinboxPort Int    @default(8291)
+  rbUser       String
+  rbPassword   String
 
-  providers   Provider[]
+  providers Provider[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  viewers User[] @relation("ProjectViewers")
+  // ---------------------
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("projects")
 }
 
 model Provider {
-  id        String  @id @default(uuid())
-  name      String  
-  vlan      String? 
-  contact   String?
-  
+  id      String  @id @default(uuid())
+  name    String
+  vlan    String?
+  contact String?
+
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
