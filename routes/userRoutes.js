@@ -83,7 +83,6 @@ router.get('/', async (req, res) => {
         const requester = await getRequester(req);
         if (!requester) return res.status(403).json({ error: "Usuário não encontrado." });
 
-        // REGRA 1: FILTRO DE SETOR
         let whereClause = {};
         
         if (requester.role.level < 100) {
@@ -96,7 +95,7 @@ router.get('/', async (req, res) => {
             where: whereClause,
             select: {
                 id: true, name: true, email: true, phone: true, avatar: true,
-                viewProjectId: true, // <--- ADICIONADO PARA O FRONT VER O VÍNCULO
+                viewProjectId: true,
                 role: { select: { name: true, label: true, level: true } },
                 sector: { select: { name: true } }
             },
@@ -126,7 +125,6 @@ router.get('/:id', async (req, res) => {
 
 // 5. CRIAR USUÁRIO (COM TRAVA DE HIERARQUIA E PROJETO)
 router.post('/', async (req, res) => {
-    // ADICIONEI viewProjectId AQUI
     const { name, email, password, phone, roleName, sectorName, viewProjectId } = req.body;
     try {
         const requester = await getRequester(req);
@@ -134,14 +132,14 @@ router.post('/', async (req, res) => {
         const targetRole = await prisma.role.findUnique({ where: { name: roleName } });
         if (!targetRole) return res.status(400).json({ error: "Cargo inválido" });
 
-        if (targetRole.level >= requester.role.level) {
+        if (targetRole.level > requester.role.level) {
             return res.status(403).json({ 
                 error: "Permissão negada: Você não pode criar um usuário com este nível de acesso." 
             });
         }
 
         let sectorIdToUse;
-        if (requester.role.level >= 100) {
+        if (requester.role.level > 100) {
             const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
             if (!sector) return res.status(400).json({ error: "Setor inválido" });
             sectorIdToUse = sector.id;
@@ -156,7 +154,6 @@ router.post('/', async (req, res) => {
                 name, email, password: hashedPassword, phone, 
                 roleId: targetRole.id, 
                 sectorId: sectorIdToUse,
-                // AQUI SALVAMOS O PROJETO (OU NULL SE ESTIVER VAZIO)
                 viewProjectId: viewProjectId || null 
             }
         });
@@ -167,7 +164,6 @@ router.post('/', async (req, res) => {
 // 6. ATUALIZAR USUÁRIO
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    // ADICIONEI viewProjectId AQUI
     const { name, email, phone, roleName, sectorName, password, viewProjectId } = req.body;
     try {
         const requester = await getRequester(req);
@@ -188,8 +184,6 @@ router.put('/:id', async (req, res) => {
             updateData.password = await bcrypt.hash(password, 10);
         }
 
-        // ATUALIZAÇÃO DO VÍNCULO DE PROJETO
-        // Se vier no body, atualizamos. Se vier string vazia, vira null (remove o vínculo)
         if (viewProjectId !== undefined) {
             updateData.viewProjectId = viewProjectId || null;
         }
