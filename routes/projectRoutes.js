@@ -11,8 +11,28 @@ const prisma = new PrismaClient();
 router.use(authenticateToken);
 
 // --- ROTAS CRUD ---
+
+// 1. Listar projetos - com filtro
 router.get('/', async (req, res) => {
-    try { const projects = await prisma.project.findMany({ include: { providers: true } }); res.json(projects); } 
+    try {
+        const userId = req.user.id || req.user.userId;
+        
+        // Buscamos o usuário para ver se ele tem restrição
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+
+        let whereClause = {};
+
+        // Se o usuário tiver  um projeto vinculado - so ve esse!
+        if (user && user.viewProjectId) {
+            whereClause = { id: user.viewProjectId };
+        }
+
+        const projects = await prisma.project.findMany({ 
+            where: whereClause,
+            include: { providers: true } 
+        }); 
+        res.json(projects); 
+    } 
     catch (error) { res.status(500).json({ error: "Erro ao buscar" }); }
 });
 
@@ -74,10 +94,10 @@ router.post('/:id/check-group', async (req, res) => {
         api.on('error', (err) => console.log("⚠️ Erro Socket:", err.message));
         await api.connect();
 
-        // 1. BAIXA ARP
+        // 1. BAIXA ARP - tigrinho
         const arpTable = await api.write('/ip/arp/print');
         
-        // Mapa IP -> MAC
+        // Mapa IP -> MAC - donalds
         const arpMap = {};
         if (Array.isArray(arpTable)) {
             arpTable.forEach(entry => {
@@ -88,16 +108,16 @@ router.post('/:id/check-group', async (req, res) => {
             });
         }
 
-        // 2. PROCESSA IPs
+        // 2. PROCESSA IPs - culpado
         for (const ip of ips) {
             const ipClean = ip.trim();
             const macEncontrado = arpMap[ipClean];
 
             if (macEncontrado) {
-                // ACHOU NO ARP
+                // ACHOU NO ARP - dario chora (na minha maquina ta pingando)
                 results[ip] = { online: true, ms: "via ARP", mac: macEncontrado, status: "Conectado" };
             } else {
-                // NÃO ACHOU -> PING
+                // NÃO ACHOU -> PING - nemim
                 try {
                     const pingCommand = api.write('/ping', { 
                         'address': ipClean, 
