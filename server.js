@@ -41,5 +41,5 @@ app.use('/api/radius', radiusRoutes);
 app.use('/api/projects', projectRoutes);
 
 
-const PORT = process.env.PORT || 55024;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
