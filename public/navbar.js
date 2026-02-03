@@ -80,7 +80,7 @@ function gerarLinksNavegacao(role, paginaAtual) {
     }
 
     if ((role === 'ADMIN_MASTER' || role === 'FULL') && userSector === 'SUPORTE_N2' && paginaAtual !== 'Gestão Radius') {
-        links += `<a href="radius.html" class="dropdown-item">📡 Gestão Radius (VM)</a>`;
+        links += `<a href="radius.html" class="dropdown-item">📡 Gestão Radius</a>`;
     }
 
     if (paginaAtual !== 'Dashboard') {
