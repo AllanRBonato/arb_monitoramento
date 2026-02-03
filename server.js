@@ -42,10 +42,5 @@ app.use('/api/radius', radiusRoutes);
 app.use('/api/projects', projectRoutes);
 
 
-<<<<<<< HEAD
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
-=======
 const PORT = process.env.PORT || 55024;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
->>>>>>> b4bc8cc278140858d4a40d6ecb3b583335e9a629
