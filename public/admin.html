@@ -444,11 +444,29 @@
             } catch (error) { alert("Erro de conexão."); }
         });
 
-        // --- CARREGAR USUÁRIO NA TELA ---
+        // --- CARREGAR USUÁRIOS NA TELA (BLINDADO CONTRA ERRO DE FILTER) ---
         async function carregarUsuarios() {
             try {
                 const res = await fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } });
+                
+                // Verifica se o servidor recusou o acesso
+                if (!res.ok) {
+                    if (res.status === 403 || res.status === 401) {
+                        document.querySelector('#usersTable tbody').innerHTML = '<tr><td colspan="5" align="center" style="color:red; padding: 20px;">🔒 Você não tem permissão para ver outros usuários.</td></tr>';
+                    } else {
+                        document.querySelector('#usersTable tbody').innerHTML = '<tr><td colspan="5" align="center" style="color:red;">⚠️ Erro ao buscar dados do servidor.</td></tr>';
+                    }
+                    return; // Interrompe a função aqui, evitando o erro do .filter
+                }
+
                 const users = await res.json();
+                
+                // Verifica se realmente chegou um Array (lista) do backend
+                if (!Array.isArray(users)) {
+                    console.error("Erro: O servidor não retornou uma lista válida.", users);
+                    return;
+                }
+
                 const tbody = document.querySelector('#usersTable tbody');
                 tbody.innerHTML = '';
 
