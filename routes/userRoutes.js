@@ -77,7 +77,7 @@ router.get('/me', async (req, res) => {
     }
 });
 
-// 3. LISTAR USUÁRIOS (Rota Corrigida e Segura)
+// 3. LISTAR USUÁRIOS
 router.get('/', async (req, res) => {
     try {
         const requester = await getRequester(req);
@@ -102,15 +102,9 @@ router.get('/', async (req, res) => {
                 email: true,
                 phone: true,
                 avatar: true,
-                role: { 
-                    select: { name: true, label: true, level: true } 
-                },
-                sector: { 
-                    select: { name: true } 
-                },
-                viewProjects: { 
-                    select: { id: true, name: true } 
-                }
+                role: { select: { name: true, label: true, level: true } },
+                sector: { select: { name: true } },
+                viewProjects: { select: { id: true, name: true } }
             },
             orderBy: { name: 'asc' }
         });
@@ -132,63 +126,81 @@ router.get('/', async (req, res) => {
 
 // 4. OBTER UM USUÁRIO POR ID
 router.get('/:id', async (req, res) => {
-    const user = await prisma.user.findUnique({
-        where: { id: req.params.id },
-        select: {
-            id: true, name: true, email: true, phone: true, avatar: true,
-            viewProjectId: true,
-            viewProjects: { select: { id: true, name: true } },
-            role: true, 
-            sector: true
-        }
-    });
-    if (user && user.password) delete user.password; 
-    
-    res.json(user);
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.params.id },
+            select: {
+                id: true, name: true, email: true, phone: true, avatar: true,
+                // CORREÇÃO: viewProjectId (singular) removido daqui!
+                viewProjects: { select: { id: true, name: true } },
+                role: true, 
+                sector: true
+            }
+        });
+        if (user && user.password) delete user.password; 
+        res.json(user);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Erro ao buscar usuário." });
+    }
 });
 
 // 5. CRIAR USUÁRIO
 router.post('/', async (req, res) => {
-    const { name, email, password, phone, roleName, sectorName, viewProjectId } = req.body;
+    // CORREÇÃO: Recebendo viewProjectIds (plural/array) do frontend
+    const { name, email, password, phone, roleName, sectorName, viewProjectIds } = req.body;
     try {
         const requester = await getRequester(req);
 
         const targetRole = await prisma.role.findUnique({ where: { name: roleName } });
         if (!targetRole) return res.status(400).json({ error: "Cargo inválido" });
 
-        if (targetRole.level >= requester.role.level) {
+        // ALTERAÇÃO DE HIERARQUIA: Mudei de '>=' para '>' 
+        // Agora Nível 50 (FULL) pode criar outro Nível 50 (FULL)
+        if (targetRole.level > requester.role.level) {
             return res.status(403).json({ 
-                error: "Permissão negada: Você não pode criar um usuário com este nível de acesso." 
+                error: "Permissão negada: Você não pode criar um usuário superior ao seu nível." 
             });
         }
 
         let sectorIdToUse;
-        
         if (requester.role.level >= 100) {
             const sector = await prisma.sector.findUnique({ where: { name: sectorName } });
             if (!sector) return res.status(400).json({ error: "Setor inválido" });
             sectorIdToUse = sector.id;
         } else {
-            sectorIdToUse = requester.sectorId; // Força o setor do chefe
+            sectorIdToUse = requester.sectorId;
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        await prisma.user.create({
-            data: { 
-                name, email, password: hashedPassword, phone, 
-                roleId: targetRole.id, 
-                sectorId: sectorIdToUse 
-            }
-        });
+        // Prepara os dados básicos
+        const createData = { 
+            name, email, password: hashedPassword, phone, 
+            roleId: targetRole.id, 
+            sectorId: sectorIdToUse 
+        };
+
+        // CORREÇÃO: Vincula a lista de projetos selecionados usando o 'connect' do Prisma
+        if (viewProjectIds && Array.isArray(viewProjectIds) && viewProjectIds.length > 0) {
+            createData.viewProjects = {
+                connect: viewProjectIds.map(id => ({ id }))
+            };
+        }
+
+        await prisma.user.create({ data: createData });
         res.status(201).json({ message: "Criado com sucesso!" });
-    } catch (e) { res.status(500).json({ error: "Erro ao criar: " + e.message }); }
+    } catch (e) { 
+        console.error(e);
+        res.status(500).json({ error: "Erro ao criar: " + e.message }); 
+    }
 });
 
 // 6. ATUALIZAR USUÁRIO
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, email, phone, roleName, sectorName, password, viewProjectId } = req.body;
+    // CORREÇÃO: Recebendo viewProjectIds (plural/array)
+    const { name, email, phone, roleName, sectorName, password, viewProjectIds } = req.body;
     try {
         const requester = await getRequester(req);
         
@@ -196,9 +208,10 @@ router.put('/:id', async (req, res) => {
             where: { id }, include: { role: true } 
         });
 
+        // ALTERAÇÃO DE HIERARQUIA: Mudei de '>=' para '>'
         if (requester.role.level < 100) {
-            if (targetUser.role.level >= requester.role.level) {
-                return res.status(403).json({ error: "Você não pode alterar dados de um superior ou de mesmo nível." });
+            if (targetUser.role.level > requester.role.level) {
+                return res.status(403).json({ error: "Você não pode alterar dados de um superior." });
             }
         }
 
@@ -211,8 +224,8 @@ router.put('/:id', async (req, res) => {
         if (roleName) {
             const newRole = await prisma.role.findUnique({ where: { name: roleName } });
             if (newRole) {
-                if (newRole.level >= requester.role.level) {
-                    return res.status(403).json({ error: "Você não pode promover alguém para seu nível ou superior." });
+                if (newRole.level > requester.role.level) {
+                    return res.status(403).json({ error: "Você não pode promover alguém para um nível superior ao seu." });
                 }
                 updateData.roleId = newRole.id;
             }
@@ -223,9 +236,19 @@ router.put('/:id', async (req, res) => {
             if (sector) updateData.sectorId = sector.id;
         }
 
+        // CORREÇÃO: Atualiza a lista de projetos usando o 'set' do Prisma (ele apaga os antigos e põe os novos)
+        if (viewProjectIds !== undefined) {
+            updateData.viewProjects = {
+                set: Array.isArray(viewProjectIds) ? viewProjectIds.map(id => ({ id })) : []
+            };
+        }
+
         await prisma.user.update({ where: { id }, data: updateData });
         res.json({ message: "Atualizado!" });
-    } catch (error) { res.status(500).json({ error: "Erro ao atualizar." }); }
+    } catch (error) { 
+        console.error(error);
+        res.status(500).json({ error: "Erro ao atualizar." }); 
+    }
 });
 
 // 7. EXCLUIR USUÁRIO
@@ -238,7 +261,9 @@ router.delete('/:id', async (req, res) => {
 
         if (!targetUser) return res.status(404).json({ error: "Usuário não existe." });
 
-        // REGRA 4: PROTEÇÃO DE EXCLUSÃO
+        // A REGRA DE EXCLUSÃO FOI MANTIDA IGUAL OU MAIOR PARA SEGURANÇA 
+        // (Para um FULL não deletar outro FULL por acidente/malícia)
+        // Se quiser que um FULL possa deletar outro FULL, mude '>=' para '>' aqui também.
         if (targetUser.role.level >= requester.role.level) {
             return res.status(403).json({ error: "Você não pode excluir um usuário de patente igual ou superior." });
         }
