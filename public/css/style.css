@@ -24,26 +24,21 @@ body {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    /* Alinha no topo */
     min-height: 100vh;
     padding-top: 80px;
-    /* Espaço para a navbar */
     padding-bottom: 40px;
     font-size: 14px;
-    /* <--- FONTE MENOR GERAL */
 }
 
-/* Força a tabela a ter barra de rolagem no celular em vez de esconder */
 .table-wrapper {
     width: 100%;
-    overflow-x: auto; /* Permite rolar para o lado */
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     margin-bottom: 1rem;
 }
 
-/* Garante que a tabela tenha um tamanho mínimo para não espremer */
 table {
-    min-width: 600px; /* Ajuste conforme a necessidade */
+    min-width: 600px;
 }
 
 /* =======================================================
