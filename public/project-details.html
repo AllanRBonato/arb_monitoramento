@@ -523,7 +523,7 @@
                         <tr>
                             <th style="width: 100px; text-align:center;">Status</th>
                             <th>Cliente / Descrição</th>
-                            <th>IPs Monitorados</th>
+                            <th>Quant. Regras por IPs</th>
                             <th style="text-align: right;">Ações</th>
                         </tr>
                     </thead>
@@ -679,7 +679,7 @@
                 tr.innerHTML = `
                     <td align="center"><span id="status-badge-${group.originalIndex}" class="status-pill ${badgeClass}">${badgeText}</span></td>
                     <td><strong style="color:#2c3e50;">${group.name}</strong></td>
-                    <td style="color:#666;">${group.ips.length} IPs</td>
+                    <td style="color:#666;">${group.ips.length} Regras</td>
                     <td align="right"><button class="btn-view-ips" onclick="abrirModalIps(${group.originalIndex})">Ver IPs</button></td>
                 `;
                 tbody.appendChild(tr);
