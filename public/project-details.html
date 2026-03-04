@@ -3,18 +3,18 @@
 
 <head>
     <meta charset="UTF-8">
-
     <script>
+        // Proteção simples de redirecionamento
         if (!localStorage.getItem('token')) {
             window.location.href = 'login.html';
         }
     </script>
-    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalhes do Projeto</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
+        /* (Seus estilos originais mantidos - apenas copiei para garantir que nada quebre) */
         html,
         body {
             margin: 0;
@@ -81,7 +81,6 @@
             transition: 0.2s;
             font-size: 0.8rem;
             height: 28px;
-            /* Altura fixa do botão */
         }
 
         .btn-back:hover {
@@ -476,7 +475,7 @@
                 </div>
             </div>
             <div>
-                <button class="btn-update" onclick="carregarTudo()">🔄 Atualizar</button>
+                <button class="btn-update" onclick="location.reload()">🔄 Atualizar Página</button>
             </div>
         </div>
     </div>
@@ -515,7 +514,7 @@
                 </div>
             </div>
 
-            <div id="loadingNat" style="text-align:center; padding:20px; color:#777;">⏳ Conectando...</div>
+            <div id="loadingNat" style="text-align:center; padding:20px; color:#777;">⏳ Conectando à RB...</div>
 
             <div class="table-scroll" id="tableContainer" style="display:none;">
                 <table class="nat-table">
@@ -523,7 +522,7 @@
                         <tr>
                             <th style="width: 100px; text-align:center;">Status</th>
                             <th>Cliente / Descrição</th>
-                            <th>Quant. Regras por IPs</th>
+                            <th>Quant. IPs Únicos</th>
                             <th style="text-align: right;">Ações</th>
                         </tr>
                     </thead>
@@ -542,7 +541,7 @@
             <div style="margin-bottom: 10px; flex-shrink: 0;">
                 <button id="btnPingModal" onclick="pingarTodosDoModal()"
                     style="width:100%; padding:8px; background:#3498db; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">⚡
-                    Checar ARP & Ping</button>
+                    Checar ARP & Ping Agora</button>
             </div>
             <div class="modal-body" id="modalIpList"></div>
             <div
@@ -561,29 +560,47 @@
         let checkQueue = [];
         let isProcessingQueue = false;
 
-        if (!token || !projectId) window.location.href = 'dashboard.html';
-        else {
+        // --- VERIFICAÇÃO DE SEGURANÇA BÁSICA ---
+        if (!token || !projectId) {
+            window.location.href = 'dashboard.html';
+        } else {
             if (typeof criarNavbar === 'function') criarNavbar('Detalhes');
             document.body.style.display = 'flex';
             carregarTudo();
-            setInterval(carregarRecursosRB, 20000);
+
+            // Loop de recursos da RB (CPU/Uptime)
+            setInterval(carregarRecursosRB, 15000);
         }
 
-        function carregarTudo() { carregarDadosProjeto(); carregarGruposNAT(); carregarRecursosRB(); }
+        function carregarTudo() {
+            carregarDadosProjeto();
+            carregarGruposNAT();
+            carregarRecursosRB();
+        }
 
         async function carregarDadosProjeto() {
             try {
                 const res = await fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } });
-                const projects = await res.json();
-                const p = projects.find(x => x.id === projectId);
-                if (p) {
-                    document.getElementById('projName').innerText = p.name;
-                    document.getElementById('projIp').innerText = p.rbIp;
-                    document.getElementById('projWinbox').innerText = p.rbWinboxPort || '8291';
-                    document.getElementById('excelArea').innerHTML = p.excelLink ? `<a href="${p.excelLink}" target="_blank" style="color:#27ae60; font-weight:bold; text-decoration:none; border:1px solid #27ae60; padding:3px 8px; border-radius:3px; font-size:0.75rem;">📊 Planilha</a>` : '';
-                    document.getElementById('providerList').innerHTML = (p.providers && p.providers.length > 0) ? p.providers.map(prov => `<div><strong>${prov.name}</strong> <span style="font-size:0.75rem;">(VLAN ${prov.vlan || '-'})</span></div>`).join('') : 'Sem provedora';
+
+                // Se der erro de token aqui, redireciona
+                if (res.status === 401 || res.status === 403) {
+                    localStorage.clear();
+                    window.location.href = 'login.html';
+                    return;
                 }
-            } catch (e) { console.error(e); }
+
+                const projects = await res.json();
+                if (Array.isArray(projects)) {
+                    const p = projects.find(x => x.id === projectId);
+                    if (p) {
+                        document.getElementById('projName').innerText = p.name;
+                        document.getElementById('projIp').innerText = p.rbIp;
+                        document.getElementById('projWinbox').innerText = p.rbWinboxPort || '8291';
+                        document.getElementById('excelArea').innerHTML = p.excelLink ? `<a href="${p.excelLink}" target="_blank" style="color:#27ae60; font-weight:bold; text-decoration:none; border:1px solid #27ae60; padding:3px 8px; border-radius:3px; font-size:0.75rem;">📊 Planilha</a>` : '';
+                        document.getElementById('providerList').innerHTML = (p.providers && p.providers.length > 0) ? p.providers.map(prov => `<div><strong>${prov.name}</strong> <span style="font-size:0.75rem;">(VLAN ${prov.vlan || '-'})</span></div>`).join('') : 'Sem provedora';
+                    }
+                }
+            } catch (e) { console.error("Erro dados projeto:", e); }
         }
 
         async function carregarRecursosRB() {
@@ -600,9 +617,23 @@
         async function carregarGruposNAT() {
             document.getElementById('loadingNat').style.display = 'block';
             document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('loadingNat').innerText = "⏳ Conectando à RB e baixando regras...";
+
             try {
                 const res = await fetch(`/api/projects/${projectId}/nat`, { headers: { 'Authorization': `Bearer ${token}` } });
+
+                // Tratamento de Erro do Servidor
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || "Erro ao buscar NAT");
+                }
+
                 const groups = await res.json();
+
+                // CORREÇÃO CRÍTICA: Valida se recebeu uma lista antes de tentar o .map
+                if (!Array.isArray(groups)) {
+                    throw new Error("Resposta inválida do servidor (não é uma lista).");
+                }
 
                 globalGroups = groups.map((g, i) => ({ ...g, originalIndex: i }));
 
@@ -611,10 +642,13 @@
 
                 aplicarFiltros();
 
+                // Inicia a checagem automática
                 checkQueue = globalGroups.map((_, idx) => idx);
                 processCheckQueue();
 
-            } catch (e) { document.getElementById('loadingNat').innerText = `Erro: ${e.message}`; }
+            } catch (e) {
+                document.getElementById('loadingNat').innerHTML = `<span style="color:#e74c3c">❌ Erro: ${e.message}</span><br><button onclick="location.reload()" style="margin-top:10px;">Tentar Novamente</button>`;
+            }
         }
 
         function aplicarFiltros() {
@@ -625,13 +659,18 @@
                 const nomeMatch = group.name.toLowerCase().includes(termo);
 
                 let statusCalc = 'offline';
-                const total = group.ips.length;
-                const onlineCount = group.ips.filter(i => i.isOnline).length;
-                const jaVerificado = group.ips.some(i => i.mac || i.status);
+                // Contagem baseada em IPs ÚNICOS
+                const uniqueIps = new Set(group.ips.map(i => i.ip));
+                const totalUnique = uniqueIps.size;
+
+                // Quantos IPs únicos estão online?
+                const ipsOnline = new Set(group.ips.filter(i => i.isOnline).map(i => i.ip)).size;
+
+                const jaVerificado = group.ips.some(i => i.mac || i.status); // Se já rodou check pelo menos uma vez
 
                 if (jaVerificado) {
-                    if (onlineCount === total && total > 0) statusCalc = 'online';
-                    else if (onlineCount > 0) statusCalc = 'partial';
+                    if (ipsOnline === totalUnique && totalUnique > 0) statusCalc = 'online';
+                    else if (ipsOnline > 0) statusCalc = 'partial';
                 } else {
                     statusCalc = 'loading';
                 }
@@ -659,19 +698,27 @@
                 let badgeClass = 'sp-loading';
                 let badgeText = '...';
 
-                const total = group.ips.length;
-                const onlineCount = group.ips.filter(i => i.isOnline).length;
-                const offlineCount = total - onlineCount;
+                // --- LÓGICA DE CONTAGEM DE IPs ÚNICOS ---
+                const uniqueIpsList = [...new Set(group.ips.map(item => item.ip))];
+                const uniqueCount = uniqueIpsList.length;
+                // ----------------------------------------
+
                 const jaVerificado = group.ips.some(i => i.mac || i.status);
 
                 if (jaVerificado) {
-                    if (onlineCount === total) {
+                    // Conta quantos IPs únicos estão online
+                    const ipsOnlineCount = uniqueIpsList.filter(ipUnico => {
+                        // Verifica se existe alguma regra para esse IP que esteja marcada como online
+                        return group.ips.some(regra => regra.ip === ipUnico && regra.isOnline);
+                    }).length;
+
+                    if (ipsOnlineCount === uniqueCount) {
                         badgeClass = 'sp-online'; badgeText = 'ONLINE';
-                    } else if (onlineCount === 0) {
+                    } else if (ipsOnlineCount === 0) {
                         badgeClass = 'sp-offline'; badgeText = 'OFFLINE';
                     } else {
-                        // MUDANÇA AQUI: Mostra quantos estão OFF
-                        badgeClass = 'sp-partial'; badgeText = `${offlineCount} OFF`;
+                        const off = uniqueCount - ipsOnlineCount;
+                        badgeClass = 'sp-partial'; badgeText = `${off} OFF`;
                     }
                 }
 
@@ -679,7 +726,7 @@
                 tr.innerHTML = `
                     <td align="center"><span id="status-badge-${group.originalIndex}" class="status-pill ${badgeClass}">${badgeText}</span></td>
                     <td><strong style="color:#2c3e50;">${group.name}</strong></td>
-                    <td style="color:#666;">${group.ips.length} Regras</td>
+                    <td style="color:#666;">${uniqueCount} IPs</td> 
                     <td align="right"><button class="btn-view-ips" onclick="abrirModalIps(${group.originalIndex})">Ver IPs</button></td>
                 `;
                 tbody.appendChild(tr);
@@ -688,25 +735,37 @@
 
         async function processCheckQueue() {
             if (isProcessingQueue || checkQueue.length === 0) return;
-            isProcessingQueue = true;
-            const batchIndices = checkQueue.splice(0, 5);
 
+            isProcessingQueue = true;
+
+            // --- OTIMIZAÇÃO CRÍTICA: Processa APENAS 1 grupo por vez ---
+            // Isso evita sobrecarregar a RB e o Node com conexões paralelas que causam timeout
+            const batchIndices = checkQueue.splice(0, 1);
+            // -----------------------------------------------------------
+
+            // Marca visualmente que está carregando
             batchIndices.forEach(idx => {
                 const b = document.getElementById(`status-badge-${idx}`);
                 if (b) { b.innerText = "..."; b.className = "status-pill sp-loading"; }
             });
 
+            // Coleta IPs únicos deste grupo
             const allIps = [];
             batchIndices.forEach(idx => globalGroups[idx].ips.forEach(i => allIps.push(i.ip)));
             const uniqueIps = [...new Set(allIps)];
 
             try {
+                // Chama o backend para validar ARP + Ping
                 const res = await fetch(`/api/projects/${projectId}/check-group`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ ips: uniqueIps })
                 });
+
+                if (!res.ok) throw new Error("Falha na checagem");
+
                 const results = await res.json();
 
+                // Atualiza os dados na memória (globalGroups)
                 batchIndices.forEach(idx => {
                     const group = globalGroups[idx];
 
@@ -720,25 +779,35 @@
                         }
                     });
 
+                    // Atualiza o Badge visualmente
                     const badge = document.getElementById(`status-badge-${idx}`);
                     if (badge) {
-                        const total = group.ips.length;
-                        const onlineCount = group.ips.filter(i => i.isOnline).length;
-                        const offlineCount = total - onlineCount;
+                        const uniqueIpsList = [...new Set(group.ips.map(item => item.ip))];
+                        const uniqueCount = uniqueIpsList.length;
 
-                        if (onlineCount === total) {
+                        const ipsOnlineCount = uniqueIpsList.filter(ipUnico => {
+                            return group.ips.some(regra => regra.ip === ipUnico && regra.isOnline);
+                        }).length;
+
+                        if (ipsOnlineCount === uniqueCount) {
                             badge.className = 'status-pill sp-online'; badge.innerText = 'ONLINE';
-                        } else if (onlineCount === 0) {
+                        } else if (ipsOnlineCount === 0) {
                             badge.className = 'status-pill sp-offline'; badge.innerText = 'OFFLINE';
                         } else {
-                            badge.className = 'status-pill sp-partial'; badge.innerText = `${offlineCount} OFF`;
+                            const off = uniqueCount - ipsOnlineCount;
+                            badge.className = 'status-pill sp-partial'; badge.innerText = `${off} OFF`;
                         }
                     }
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error("Erro no ping automático:", e);
+                // Se der erro, não faz nada crítico, apenas deixa o badge como estava ou tenta depois
+            }
 
             isProcessingQueue = false;
-            if (checkQueue.length > 0) setTimeout(processCheckQueue, 200);
+
+            // Continua a fila se ainda tiver gente (delay de 500ms para respirar)
+            if (checkQueue.length > 0) setTimeout(processCheckQueue, 500);
         }
 
         function abrirModalIps(originalIndex) {
@@ -753,11 +822,18 @@
             const list = document.getElementById('modalIpList');
             list.innerHTML = '';
 
+            // Agrupa por IP para mostrar bonito no modal
             const grouped = {};
             group.ips.forEach(item => {
                 if (!grouped[item.ip]) grouped[item.ip] = { ports: [], online: item.isOnline, latency: item.latency, mac: item.mac, status: item.status };
                 grouped[item.ip].ports.push(item.port);
-                if (item.isOnline) { grouped[item.ip].online = true; grouped[item.ip].latency = item.latency; grouped[item.ip].mac = item.mac; grouped[item.ip].status = item.status; }
+                // Se qualquer regra desse IP estiver online, considera o IP online
+                if (item.isOnline) {
+                    grouped[item.ip].online = true;
+                    grouped[item.ip].latency = item.latency;
+                    grouped[item.ip].mac = item.mac;
+                    grouped[item.ip].status = item.status;
+                }
             });
 
             Object.keys(grouped).forEach(ip => {
@@ -772,7 +848,8 @@
                     extraInfo = `<span class="mac-info">MAC: ${data.mac || 'N/A'} <small style="color:#555">(${data.latency})</small></span>`;
                 } else {
                     statusHtml = `<span class="badge-modal bm-off">OFF</span>`;
-                    extraInfo = `<span class="status-text">${data.status || 'Sem sinal ARP/Ping'}</span>`;
+                    // Mostra se é Cache ARP ou Offline total
+                    extraInfo = `<span class="status-text">${data.status || 'Offline'}</span>`;
                 }
 
                 let portsHtml = data.ports.map(p => `<span class="port-tag">Porta ${p}</span>`).join('');
@@ -788,6 +865,7 @@
             const btn = document.getElementById('btnPingModal');
             btn.disabled = true; btn.innerText = "⏳ Verificando...";
             renderizarListaModal(true);
+
             const group = globalGroups[currentGroupIndex];
             const uniqueIps = [...new Set(group.ips.map(i => i.ip))];
 
@@ -796,25 +874,44 @@
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ ips: uniqueIps })
                 });
+
+                if (!res.ok) throw new Error("Erro ao verificar");
+
                 const results = await res.json();
+
                 group.ips.forEach(item => {
                     const result = results[item.ip];
-                    if (result) { item.isOnline = result.online; item.latency = result.ms; item.mac = result.mac; item.status = result.status; }
+                    if (result) {
+                        item.isOnline = result.online;
+                        item.latency = result.ms;
+                        item.mac = result.mac;
+                        item.status = result.status;
+                    }
                 });
 
-                const groupUniqueIps = [...new Set(group.ips.map(i => i.ip))];
-                let offlineCount = 0;
-                groupUniqueIps.forEach(ip => { if (group.ips.find(g => g.ip === ip && !g.isOnline)) offlineCount++; });
-
+                // Atualiza o badge da tabela de fundo também
                 const badge = document.getElementById(`status-badge-${currentGroupIndex}`);
                 if (badge) {
-                    if (offlineCount === 0) { badge.className = 'status-pill sp-online'; badge.innerText = 'ONLINE'; }
-                    else if (offlineCount === groupUniqueIps.length) { badge.className = 'status-pill sp-offline'; badge.innerText = 'OFFLINE'; }
-                    else { badge.className = 'status-pill sp-partial'; badge.innerText = `${offlineCount} OFF`; }
+                    const uniqueIpsList = [...new Set(group.ips.map(item => item.ip))];
+                    const uniqueCount = uniqueIpsList.length;
+                    const ipsOnlineCount = uniqueIpsList.filter(ipUnico => {
+                        return group.ips.some(regra => regra.ip === ipUnico && regra.isOnline);
+                    }).length;
+
+                    if (ipsOnlineCount === uniqueCount) {
+                        badge.className = 'status-pill sp-online'; badge.innerText = 'ONLINE';
+                    } else if (ipsOnlineCount === 0) {
+                        badge.className = 'status-pill sp-offline'; badge.innerText = 'OFFLINE';
+                    } else {
+                        const off = uniqueCount - ipsOnlineCount;
+                        badge.className = 'status-pill sp-partial'; badge.innerText = `${off} OFF`;
+                    }
                 }
-            } catch (e) { }
+
+            } catch (e) { alert("Erro ao verificar status. Tente novamente."); }
+
             renderizarListaModal(false);
-            btn.disabled = false; btn.innerText = "⚡ Checar ARP & Ping";
+            btn.disabled = false; btn.innerText = "⚡ Checar ARP & Ping Agora";
         }
 
         function fecharModalIps() { document.getElementById('modalIps').style.display = 'none'; }
