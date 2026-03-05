@@ -614,18 +614,26 @@
             } catch (e) { }
         }
 
+        // --- AQUI ESTÁ A FUNÇÃO BLINDADA CONTRA O TIMEOUT DO NGINX ---
         async function carregarGruposNAT() {
             document.getElementById('loadingNat').style.display = 'block';
             document.getElementById('tableContainer').style.display = 'none';
-            document.getElementById('loadingNat').innerText = "⏳ Conectando à RB e baixando regras...";
+            document.getElementById('loadingNat').innerText = "⏳ Conectando à RB e baixando regras (isso pode levar até 1 minuto na primeira vez)...";
 
             try {
                 const res = await fetch(`/api/projects/${projectId}/nat`, { headers: { 'Authorization': `Bearer ${token}` } });
 
-                // Tratamento de Erro do Servidor
+                // Tratamento de Erro do Servidor Blindado
                 if (!res.ok) {
-                    const errData = await res.json();
-                    throw new Error(errData.error || "Erro ao buscar NAT");
+                    let errorMsg = "Erro de conexão com o servidor.";
+                    try {
+                        const errData = await res.json();
+                        errorMsg = errData.error || errorMsg;
+                    } catch(err) {
+                        // Se cair aqui, é porque o Nginx mandou um HTML de erro 502/504, não quebramos mais!
+                        errorMsg = "A RB tem muitas regras e demorou para responder. O servidor está salvando tudo em segundo plano. Aguarde uns 30 segundos e tente novamente.";
+                    }
+                    throw new Error(errorMsg);
                 }
 
                 const groups = await res.json();
@@ -647,9 +655,14 @@
                 processCheckQueue();
 
             } catch (e) {
-                document.getElementById('loadingNat').innerHTML = `<span style="color:#e74c3c">❌ Erro: ${e.message}</span><br><button onclick="location.reload()" style="margin-top:10px;">Tentar Novamente</button>`;
+                // Mostra o erro amigável na tela com um botão bacana para tentar de novo sem recarregar a página inteira
+                document.getElementById('loadingNat').innerHTML = `
+                    <div style="color:#e74c3c; font-weight:bold; margin-bottom: 10px;">❌ ${e.message}</div>
+                    <button onclick="carregarGruposNAT()" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Tentar Novamente</button>
+                `;
             }
         }
+        // -------------------------------------------------------------
 
         function aplicarFiltros() {
             const termo = document.getElementById('searchFilter').value.toLowerCase();
@@ -738,24 +751,20 @@
 
             isProcessingQueue = true;
 
-            // --- OTIMIZAÇÃO CRÍTICA: Processa APENAS 1 grupo por vez ---
-            // Isso evita sobrecarregar a RB e o Node com conexões paralelas que causam timeout
             const batchIndices = checkQueue.splice(0, 1);
-            // -----------------------------------------------------------
 
-            // Marca visualmente que está carregando
+
             batchIndices.forEach(idx => {
                 const b = document.getElementById(`status-badge-${idx}`);
                 if (b) { b.innerText = "..."; b.className = "status-pill sp-loading"; }
             });
 
-            // Coleta IPs únicos deste grupo
+
             const allIps = [];
             batchIndices.forEach(idx => globalGroups[idx].ips.forEach(i => allIps.push(i.ip)));
             const uniqueIps = [...new Set(allIps)];
 
             try {
-                // Chama o backend para validar ARP + Ping
                 const res = await fetch(`/api/projects/${projectId}/check-group`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ ips: uniqueIps })
@@ -764,8 +773,6 @@
                 if (!res.ok) throw new Error("Falha na checagem");
 
                 const results = await res.json();
-
-                // Atualiza os dados na memória (globalGroups)
                 batchIndices.forEach(idx => {
                     const group = globalGroups[idx];
 
