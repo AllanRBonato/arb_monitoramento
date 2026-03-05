@@ -1,40 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <script>
-    const token = localStorage.getItem('token');
-    if (!token) window.location.href = '/login.html';
-    fetch('/api/verify', {
-        headers: { 'Authorization': `Bearer ${token}` }
-    })
-    .then(r => {
-        if (!r.ok) throw new Error('Token inválido');
-        return r.json();
-    })
-    .then(user => {
-        console.log("Usuário logado:", user);
+        const token = localStorage.getItem("token");
+        if (!token) window.location.href = "/login.html";
 
-        const roleName = (user.role && user.role.name) ? user.role.name.toUpperCase() : '';
-        
-        const cargosPermitidos = ['FULL', 'SUPER ADMIN', 'ADMINISTRADOR', 'GERENTE'];
-        const temPermissao = cargosPermitidos.some(permitido => roleName.includes(permitido));
+        fetch("/api/verify", {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((r) => {
+                if (!r.ok) throw new Error("Token inválido");
+                return r.json();
+            })
+            .then((user) => {
+                console.log("Dados do Token:", user);
 
-        if (!temPermissao) {
-            alert(`Acesso negado! Seu cargo atual (${roleName}) não tem permissão.`);
-            window.location.href = '/dashboard.html';
-        }
-    })
-    .catch(e => {
-        console.error(e);
-        localStorage.clear();
-        window.location.href = '/login.html';
-    });
-</script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                let roleInfo =
+                    user.roleName || user.role || (user.user && user.user.role) || "";
+
+                if (
+                    typeof roleInfo === "object" &&
+                    roleInfo !== null &&
+                    roleInfo.name
+                ) {
+                    roleInfo = roleInfo.name;
+                }
+
+                if (!roleInfo || roleInfo === "") {
+                    roleInfo =
+                        localStorage.getItem("userRole") ||
+                        localStorage.getItem("role") ||
+                        localStorage.getItem("cargo") ||
+                        "DESCONHECIDO";
+                }
+
+                const roleNameStr = String(roleInfo).toUpperCase().trim();
+
+                const cargosPermitidos = [
+                    "FULL",
+                    "SUPER ADMIN",
+                    "ADMINISTRADOR",
+                    "GERENTE",
+                    "MASTER",
+                    "ADMIN",
+                ];
+
+                const temPermissao = cargosPermitidos.some((permitido) =>
+                    roleNameStr.includes(permitido),
+                );
+
+                if (!temPermissao) {
+                    alert(
+                        `Acesso negado! Seu cargo atual (${roleNameStr}) não tem permissão.`,
+                    );
+                    window.location.href = "/dashboard.html";
+                }
+            })
+            .catch((e) => {
+                console.error("Erro na verificação:", e);
+                localStorage.clear();
+                window.location.href = "/login.html";
+            });
+        </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gestão de Usuários</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css" />
     <style>
         body {
             display: none;
@@ -198,69 +230,82 @@
 </head>
 
 <body>
-
-    <div class="card admin-mode" style="margin-top: 20px;">
-
-        <div id="passwordAlerts" class="alert-card"
-            style="display:none; background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:15px; border-radius:8px; margin-bottom:20px;">
-            <div class="alert-title" style="font-weight:bold; margin-bottom:10px;">⚠️ Solicitações de Recuperação de
-                Senha</div>
+    <div class="card admin-mode" style="margin-top: 20px">
+        <div id="passwordAlerts" class="alert-card" style="
+          display: none;
+          background: #fff3cd;
+          border: 1px solid #ffeeba;
+          color: #856404;
+          padding: 15px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+        ">
+            <div class="alert-title" style="font-weight: bold; margin-bottom: 10px">
+                ⚠️ Solicitações de Recuperação de Senha
+            </div>
             <div id="requestsList"></div>
         </div>
 
         <div id="masterControls" class="admin-controls">
             <div class="config-card">
                 <div class="config-title">🏢 Gestão de Setores</div>
-                <div style="display:flex; gap:5px;">
-                    <input type="hidden" id="sectorIdEdit">
-                    <input type="text" id="newSectorName" placeholder="Ex: FINANCEIRO">
-                    <button class="btn-success" style="width:auto; margin:0;" onclick="salvarSetor()"
-                        id="btnSaveSector">+</button>
-                    <button class="btn-danger" style="width:auto; margin:0; display:none;"
-                        onclick="cancelarEdicaoSetor()" id="btnCancelSector">✕</button>
+                <div style="display: flex; gap: 5px">
+                    <input type="hidden" id="sectorIdEdit" />
+                    <input type="text" id="newSectorName" placeholder="Ex: FINANCEIRO" />
+                    <button class="btn-success" style="width: auto; margin: 0" onclick="salvarSetor()"
+                        id="btnSaveSector">
+                        +
+                    </button>
+                    <button class="btn-danger" style="width: auto; margin: 0; display: none"
+                        onclick="cancelarEdicaoSetor()" id="btnCancelSector">
+                        ✕
+                    </button>
                 </div>
                 <div class="item-list" id="listaSetores">Carregando...</div>
             </div>
 
             <div class="config-card">
                 <div class="config-title">⚖️ Gestão de Cargos</div>
-                <input type="hidden" id="roleIdEdit">
-                <input type="text" id="newRoleName" placeholder="Ex: SUPERVISOR" style="margin-bottom:0;">
-                <div style="display: flex; gap: 5px;">
-                    <select id="newRoleLevel" style="flex:1;">
+                <input type="hidden" id="roleIdEdit" />
+                <input type="text" id="newRoleName" placeholder="Ex: SUPERVISOR" style="margin-bottom: 0" />
+                <div style="display: flex; gap: 5px">
+                    <select id="newRoleLevel" style="flex: 1">
                         <option value="50">Nível 50 (Gerência)</option>
                         <option value="20">Nível 20 (Operacional)</option>
                         <option value="10">Nível 10 (Visualização)</option>
                     </select>
-                    <input type="text" id="newRoleLabel" placeholder="Tag (Ex: Pode Editar)" style="flex:1;">
+                    <input type="text" id="newRoleLabel" placeholder="Tag (Ex: Pode Editar)" style="flex: 1" />
                 </div>
-                <div style="display:flex; gap:5px;">
-                    <button class="btn-success" style="margin:0;" onclick="salvarCargo()"
-                        id="btnSaveRole">Salvar</button>
-                    <button class="btn-danger" style="margin:0; width: 40px; display:none;"
-                        onclick="cancelarEdicaoCargo()" id="btnCancelRole">✕</button>
+                <div style="display: flex; gap: 5px">
+                    <button class="btn-success" style="margin: 0" onclick="salvarCargo()" id="btnSaveRole">
+                        Salvar
+                    </button>
+                    <button class="btn-danger" style="margin: 0; width: 40px; display: none"
+                        onclick="cancelarEdicaoCargo()" id="btnCancelRole">
+                        ✕
+                    </button>
                 </div>
                 <div class="item-list" id="listaCargos">Carregando...</div>
             </div>
         </div>
 
         <form id="createForm" class="admin-form-grid" autocomplete="off">
-            <input type="text" style="display:none">
-            <input type="password" style="display:none">
-            <div style="grid-column: span 2;">
+            <input type="text" style="display: none" />
+            <input type="password" style="display: none" />
+            <div style="grid-column: span 2">
                 <h3>👤 Gerenciar Usuário</h3>
             </div>
             <div>
-                <input type="text" id="name" placeholder="Nome Completo" required autocomplete="new-password">
-                <input type="email" id="email" placeholder="E-mail" style="margin-top: 10px;" required
-                    autocomplete="new-password">
-                <input type="text" id="phone" placeholder="Telefone" style="margin-top: 10px;" required
-                    autocomplete="new-password">
+                <input type="text" id="name" placeholder="Nome Completo" required autocomplete="new-password" />
+                <input type="email" id="email" placeholder="E-mail" style="margin-top: 10px" required
+                    autocomplete="new-password" />
+                <input type="text" id="phone" placeholder="Telefone" style="margin-top: 10px" required
+                    autocomplete="new-password" />
             </div>
             <div>
                 <div class="input-group">
                     <input type="password" id="password" placeholder="Senha Inicial" required
-                        autocomplete="new-password">
+                        autocomplete="new-password" />
                     <button type="button" onclick="toggleAdminPassword()" class="btn-addon" tabindex="-1"
                         title="Mostrar Senha">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
@@ -272,44 +317,62 @@
                     </button>
                 </div>
 
-                <select id="role" style="margin-top: 10px;" required>
+                <select id="role" style="margin-top: 10px" required>
                     <option>Carregando...</option>
                 </select>
-                <select id="sector" style="margin-top: 10px;" required>
+                <select id="sector" style="margin-top: 10px" required>
                     <option>Carregando...</option>
                 </select>
 
-                <div id="projectDiv" style="display:none; margin-top: 15px;">
-                    <label style="font-weight: bold; color: #2c3e50; margin-bottom: 5px; display:block;">
+                <div id="projectDiv" style="display: none; margin-top: 15px">
+                    <label style="
+                font-weight: bold;
+                color: #2c3e50;
+                margin-bottom: 5px;
+                display: block;
+              ">
                         📂 Projetos Vinculados:
                     </label>
-                    <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px;">
+                    <div style="font-size: 0.85rem; color: #7f8c8d; margin-bottom: 5px">
                         Marque os projetos que este usuário pode acessar:
                     </div>
 
                     <div id="projectList" style="
-                        border: 1px solid #bdc3c7; 
-                        border-radius: 6px; 
-                        padding: 10px; 
-                        max-height: 150px; 
-                        overflow-y: auto; 
-                        background: #fff;
-                        display: flex;
-                        flex-direction: column;
-                        gap: 8px;
-                    ">
-                        <div style="color:#999; font-style:italic;">Carregando projetos...</div>
+                border: 1px solid #bdc3c7;
+                border-radius: 6px;
+                padding: 10px;
+                max-height: 150px;
+                overflow-y: auto;
+                background: #fff;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+              ">
+                        <div style="color: #999; font-style: italic">
+                            Carregando projetos...
+                        </div>
                     </div>
                 </div>
-
             </div>
-            <button type="submit" class="btn-primary" style="grid-column: span 2;">Criar Usuário</button>
+            <button type="submit" class="btn-primary" style="grid-column: span 2">
+                Criar Usuário
+            </button>
         </form>
 
-        <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+        <div style="
+          margin-bottom: 15px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        ">
             <input type="text" id="searchUser" placeholder="🔍 Pesquisar por nome, e-mail, cargo ou setor..."
-                onkeyup="filtrarUsuarios()"
-                style="padding: 12px; width: 100%; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem;">
+                onkeyup="filtrarUsuarios()" style="
+            padding: 12px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+          " />
         </div>
 
         <div class="table-responsive">
@@ -332,19 +395,20 @@
 
     <script>
         let editingUserId = null;
-        const myRole = localStorage.getItem('userRole');
-        const mySector = localStorage.getItem('userSector');
+        const myRole = localStorage.getItem("userRole");
+        const mySector = localStorage.getItem("userSector");
 
-        if (!token) { window.location.href = 'login.html'; }
-        else {
-            document.body.style.display = 'flex';
-            criarNavbar('Gestão de Usuários');
+        if (!token) {
+            window.location.href = "login.html";
+        } else {
+            document.body.style.display = "flex";
+            criarNavbar("Gestão de Usuários");
             iniciarPagina();
         }
 
         async function iniciarPagina() {
-            if (myRole === 'ADMIN_MASTER') {
-                document.getElementById('masterControls').style.display = 'grid';
+            if (myRole === "ADMIN_MASTER") {
+                document.getElementById("masterControls").style.display = "grid";
                 await atualizarListaSetores();
                 await atualizarListaCargos();
             }
@@ -355,22 +419,25 @@
         }
 
         function toggleAdminPassword() {
-            const input = document.getElementById('password');
+            const input = document.getElementById("password");
             input.type = input.type === "password" ? "text" : "password";
         }
 
         function filtrarUsuarios() {
-            const input = document.getElementById('searchUser');
+            const input = document.getElementById("searchUser");
             const filter = input.value.toLowerCase();
-            const table = document.getElementById('usersTable');
-            const tr = table.getElementsByTagName('tr');
+            const table = document.getElementById("usersTable");
+            const tr = table.getElementsByTagName("tr");
             for (let i = 1; i < tr.length; i++) {
-                const tds = tr[i].getElementsByTagName('td');
+                const tds = tr[i].getElementsByTagName("td");
                 let found = false;
                 for (let j = 0; j < tds.length - 1; j++) {
                     if (tds[j]) {
                         const txtValue = tds[j].textContent || tds[j].innerText;
-                        if (txtValue.toLowerCase().indexOf(filter) > -1) { found = true; break; }
+                        if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                            found = true;
+                            break;
+                        }
                     }
                 }
                 tr[i].style.display = found ? "" : "none";
@@ -380,21 +447,24 @@
         // --- CARREGAR PROJETOS (CHECKBOX) ---
         async function carregarDropdownProjetos() {
             try {
-                const res = await fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch("/api/projects", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 if (!res.ok) {
-                    document.getElementById('projectList').innerHTML = '<small>Não foi possível carregar projetos.</small>';
+                    document.getElementById("projectList").innerHTML =
+                        "<small>Não foi possível carregar projetos.</small>";
                     return;
                 }
 
                 const projects = await res.json();
-                const container = document.getElementById('projectList');
-                container.innerHTML = '';
+                const container = document.getElementById("projectList");
+                container.innerHTML = "";
 
                 if (Array.isArray(projects) && projects.length > 0) {
-                    projects.forEach(p => {
-                        const div = document.createElement('div');
-                        div.style.display = 'flex';
-                        div.style.alignItems = 'center';
+                    projects.forEach((p) => {
+                        const div = document.createElement("div");
+                        div.style.display = "flex";
+                        div.style.alignItems = "center";
                         div.innerHTML = `
                             <input type="checkbox" id="proj_${p.id}" value="${p.id}" class="project-checkbox" style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
                             <label for="proj_${p.id}" style="margin: 0; cursor: pointer; color: #333;">${p.name}</label>
@@ -402,70 +472,98 @@
                         container.appendChild(div);
                     });
                 } else {
-                    container.innerHTML = '<div style="padding:5px; color:#777;">Nenhum projeto cadastrado.</div>';
+                    container.innerHTML =
+                        '<div style="padding:5px; color:#777;">Nenhum projeto cadastrado.</div>';
                 }
-            } catch (e) { console.error("Erro checkbox projetos", e); }
+            } catch (e) {
+                console.error("Erro checkbox projetos", e);
+            }
         }
 
         // --- GATILHO PARA MOSTRAR PROJETOS ---
-        document.getElementById('role').addEventListener('change', function () {
+        document.getElementById("role").addEventListener("change", function () {
             const selectedOption = this.options[this.selectedIndex];
             const selectedText = selectedOption.text.toUpperCase();
-            const level = parseInt(selectedOption.getAttribute('data-level')) || 0;
-            const projectDiv = document.getElementById('projectDiv');
+            const level = parseInt(selectedOption.getAttribute("data-level")) || 0;
+            const projectDiv = document.getElementById("projectDiv");
 
-            if (level === 10 || selectedText.includes('CLIENTE') || selectedText.includes('VISUALIZA')) {
-                projectDiv.style.display = 'block';
+            if (
+                level === 10 ||
+                selectedText.includes("CLIENTE") ||
+                selectedText.includes("VISUALIZA")
+            ) {
+                projectDiv.style.display = "block";
             } else {
-                projectDiv.style.display = 'none';
-                document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = false);
+                projectDiv.style.display = "none";
+                document
+                    .querySelectorAll(".project-checkbox")
+                    .forEach((cb) => (cb.checked = false));
             }
         });
 
         // --- SALVAR USUÁRIO (CRIA/EDITA) ---
-        document.getElementById('createForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        document
+            .getElementById("createForm")
+            .addEventListener("submit", async (e) => {
+                e.preventDefault();
 
-            const checkboxes = document.querySelectorAll('.project-checkbox:checked');
-            const projectIds = Array.from(checkboxes).map(cb => cb.value);
+                const checkboxes = document.querySelectorAll(
+                    ".project-checkbox:checked",
+                );
+                const projectIds = Array.from(checkboxes).map((cb) => cb.value);
 
-            const data = {
-                name: document.getElementById('name').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                roleName: document.getElementById('role').value,
-                sectorName: document.getElementById('sector').value,
-                password: document.getElementById('password').value,
-                viewProjectIds: projectIds
-            };
+                const data = {
+                    name: document.getElementById("name").value,
+                    email: document.getElementById("email").value,
+                    phone: document.getElementById("phone").value,
+                    roleName: document.getElementById("role").value,
+                    sectorName: document.getElementById("sector").value,
+                    password: document.getElementById("password").value,
+                    viewProjectIds: projectIds,
+                };
 
-            const url = editingUserId ? `/api/users/${editingUserId}` : '/api/users';
-            const method = editingUserId ? 'PUT' : 'POST';
+                const url = editingUserId
+                    ? `/api/users/${editingUserId}`
+                    : "/api/users";
+                const method = editingUserId ? "PUT" : "POST";
 
-            try {
-                const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(data) });
-                if (res.ok) {
-                    alert(editingUserId ? 'Usuário atualizado!' : 'Usuário criado!');
-                    limparFormUsuario();
-                    carregarUsuarios();
-                } else {
-                    const err = await res.json();
-                    alert("Erro: " + err.error);
+                try {
+                    const res = await fetch(url, {
+                        method,
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify(data),
+                    });
+                    if (res.ok) {
+                        alert(editingUserId ? "Usuário atualizado!" : "Usuário criado!");
+                        limparFormUsuario();
+                        carregarUsuarios();
+                    } else {
+                        const err = await res.json();
+                        alert("Erro: " + err.error);
+                    }
+                } catch (error) {
+                    alert("Erro de conexão.");
                 }
-            } catch (error) { alert("Erro de conexão."); }
-        });
+            });
 
         // --- CARREGAR USUÁRIOS NA TELA (BLINDADO CONTRA ERRO DE FILTER) ---
         async function carregarUsuarios() {
             try {
-                const res = await fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch("/api/users", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
 
                 // Verifica se o servidor recusou o acesso
                 if (!res.ok) {
                     if (res.status === 403 || res.status === 401) {
-                        document.querySelector('#usersTable tbody').innerHTML = '<tr><td colspan="5" align="center" style="color:red; padding: 20px;">🔒 Você não tem permissão para ver outros usuários.</td></tr>';
+                        document.querySelector("#usersTable tbody").innerHTML =
+                            '<tr><td colspan="5" align="center" style="color:red; padding: 20px;">🔒 Você não tem permissão para ver outros usuários.</td></tr>';
                     } else {
-                        document.querySelector('#usersTable tbody').innerHTML = '<tr><td colspan="5" align="center" style="color:red;">⚠️ Erro ao buscar dados do servidor.</td></tr>';
+                        document.querySelector("#usersTable tbody").innerHTML =
+                            '<tr><td colspan="5" align="center" style="color:red;">⚠️ Erro ao buscar dados do servidor.</td></tr>';
                     }
                     return; // Interrompe a função aqui, evitando o erro do .filter
                 }
@@ -474,39 +572,54 @@
 
                 // Verifica se realmente chegou um Array (lista) do backend
                 if (!Array.isArray(users)) {
-                    console.error("Erro: O servidor não retornou uma lista válida.", users);
+                    console.error(
+                        "Erro: O servidor não retornou uma lista válida.",
+                        users,
+                    );
                     return;
                 }
 
-                const tbody = document.querySelector('#usersTable tbody');
-                tbody.innerHTML = '';
+                const tbody = document.querySelector("#usersTable tbody");
+                tbody.innerHTML = "";
 
-                const usuariosFiltrados = users.filter(u => {
-                    if (myRole === 'ADMIN_MASTER') return true;
+                const usuariosFiltrados = users.filter((u) => {
+                    if (myRole === "ADMIN_MASTER") return true;
                     if (u.sector !== mySector) return false;
-                    let cargoUser = u.role || u.roleName || '';
-                    if (typeof cargoUser === 'object') cargoUser = cargoUser.name;
-                    if (cargoUser === 'ADMIN_MASTER') return false;
+                    let cargoUser = u.role || u.roleName || "";
+                    if (typeof cargoUser === "object") cargoUser = cargoUser.name;
+                    if (cargoUser === "ADMIN_MASTER") return false;
                     return true;
                 });
 
                 if (usuariosFiltrados.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" align="center">Nenhum usuário encontrado.</td></tr>';
+                    tbody.innerHTML =
+                        '<tr><td colspan="5" align="center">Nenhum usuário encontrado.</td></tr>';
                     return;
                 }
 
-                usuariosFiltrados.forEach(u => {
-                    let rawRole = u.role || u.roleName || '';
-                    const cargo = (typeof rawRole === 'string' ? rawRole : rawRole.name).toUpperCase();
-                    const label = u.roleLabel || (rawRole.label ? rawRole.label : '');
+                usuariosFiltrados.forEach((u) => {
+                    let rawRole = u.role || u.roleName || "";
+                    const cargo = (
+                        typeof rawRole === "string" ? rawRole : rawRole.name
+                    ).toUpperCase();
+                    const label = u.roleLabel || (rawRole.label ? rawRole.label : "");
 
-                    let badgeBg = '#ecf0f1';
-                    let badgeColor = '#2c3e50';
+                    let badgeBg = "#ecf0f1";
+                    let badgeColor = "#2c3e50";
 
-                    if (cargo === 'ADMIN_MASTER') { badgeBg = '#fadbd8'; badgeColor = '#c0392b'; }
-                    else if (cargo === 'FULL') { badgeBg = '#d4efdf'; badgeColor = '#27ae60'; }
-                    else if (cargo === 'WRITE' || cargo === 'OPERADOR') { badgeBg = '#fcf3cf'; badgeColor = '#d68910'; }
-                    else if (cargo === 'READ' || cargo === 'LEITURA') { badgeBg = '#d6eaf8'; badgeColor = '#2980b9'; }
+                    if (cargo === "ADMIN_MASTER") {
+                        badgeBg = "#fadbd8";
+                        badgeColor = "#c0392b";
+                    } else if (cargo === "FULL") {
+                        badgeBg = "#d4efdf";
+                        badgeColor = "#27ae60";
+                    } else if (cargo === "WRITE" || cargo === "OPERADOR") {
+                        badgeBg = "#fcf3cf";
+                        badgeColor = "#d68910";
+                    } else if (cargo === "READ" || cargo === "LEITURA") {
+                        badgeBg = "#d6eaf8";
+                        badgeColor = "#2980b9";
+                    }
 
                     tbody.innerHTML += `
                         <tr>
@@ -514,7 +627,7 @@
                             <td>${u.email}</td>
                             <td>
                                 <span class="role-badge" style="background: ${badgeBg}; color: ${badgeColor};">
-                                    ${cargo || 'SEM CARGO'}
+                                    ${cargo || "SEM CARGO"}
                                 </span>
                                 <span class="tag-badge">${label}</span>
                             </td>
@@ -526,75 +639,95 @@
                         </tr>
                     `;
                 });
-            } catch (error) { console.error("Erro ao carregar usuários:", error); }
+            } catch (error) {
+                console.error("Erro ao carregar usuários:", error);
+            }
         }
 
         // --- PREPARAR EDIÇÃO ---
         async function prepararEdicaoUsuario(id) {
             try {
-                const res = await fetch(`/api/users/${id}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch(`/api/users/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 const user = await res.json();
                 editingUserId = user.id;
-                document.getElementById('name').value = user.name;
-                document.getElementById('email').value = user.email;
-                document.getElementById('phone').value = user.phone;
+                document.getElementById("name").value = user.name;
+                document.getElementById("email").value = user.email;
+                document.getElementById("phone").value = user.phone;
 
                 if (user.role) {
-                    document.getElementById('role').value = user.role.name;
-                    document.getElementById('role').dispatchEvent(new Event('change'));
+                    document.getElementById("role").value = user.role.name;
+                    document.getElementById("role").dispatchEvent(new Event("change"));
                 }
-                if (user.sector) document.getElementById('sector').value = user.sector.name;
+                if (user.sector)
+                    document.getElementById("sector").value = user.sector.name;
 
-                document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = false);
+                document
+                    .querySelectorAll(".project-checkbox")
+                    .forEach((cb) => (cb.checked = false));
 
                 if (user.viewProjects && Array.isArray(user.viewProjects)) {
-                    user.viewProjects.forEach(proj => {
+                    user.viewProjects.forEach((proj) => {
                         const checkbox = document.getElementById(`proj_${proj.id}`);
                         if (checkbox) checkbox.checked = true;
                     });
                 }
 
-                const passInput = document.getElementById('password');
+                const passInput = document.getElementById("password");
                 passInput.value = "";
                 passInput.placeholder = "Deixe vazio para manter a senha";
                 passInput.required = false;
 
-                document.getElementById('createForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                const btn = document.querySelector('#createForm button[type="submit"]');
+                document
+                    .getElementById("createForm")
+                    .scrollIntoView({ behavior: "smooth", block: "center" });
+                const btn = document.querySelector(
+                    '#createForm button[type="submit"]',
+                );
                 btn.innerText = "Salvar Alterações";
                 btn.style.backgroundColor = "#e67e22";
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         // --- EXCLUIR USUÁRIO ---
         async function excluirUsuario(id) {
             if (!confirm("Tem certeza que deseja remover este usuário?")) return;
-            await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            await fetch(`/api/users/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
             carregarUsuarios();
         }
 
         // --- LIMPAR FORMULÁRIO ---
         function limparFormUsuario() {
             editingUserId = null;
-            document.getElementById('createForm').reset();
-            document.querySelectorAll('.project-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById("createForm").reset();
+            document
+                .querySelectorAll(".project-checkbox")
+                .forEach((cb) => (cb.checked = false));
             const btn = document.querySelector('#createForm button[type="submit"]');
             btn.innerText = "Criar Usuário";
             btn.style.backgroundColor = "";
-            document.getElementById('password').placeholder = "Senha Inicial";
-            document.getElementById('password').required = true;
-            document.getElementById('projectDiv').style.display = 'none';
+            document.getElementById("password").placeholder = "Senha Inicial";
+            document.getElementById("password").required = true;
+            document.getElementById("projectDiv").style.display = "none";
         }
 
         // --- FUNÇÕES DE CARGOS E SETORES (COMPLETAS) ---
         async function atualizarListaSetores() {
             try {
-                const res = await fetch('/api/sectors', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch("/api/sectors", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 const setores = await res.json();
-                const divLista = document.getElementById('listaSetores');
-                divLista.innerHTML = '';
+                const divLista = document.getElementById("listaSetores");
+                divLista.innerHTML = "";
                 if (Array.isArray(setores)) {
-                    setores.forEach(s => {
+                    setores.forEach((s) => {
                         divLista.innerHTML += `<div class="list-item"><span>${s.name}</span><div><button class="action-btn btn-edit" onclick="prepararEdicaoSetor('${s.id}', '${s.name}')">✏️</button><button class="action-btn btn-del" onclick="excluirSetor('${s.id}')">🗑️</button></div></div>`;
                     });
                 }
@@ -603,43 +736,62 @@
         }
 
         async function salvarSetor() {
-            const id = document.getElementById('sectorIdEdit').value;
-            const name = document.getElementById('newSectorName').value.toUpperCase();
+            const id = document.getElementById("sectorIdEdit").value;
+            const name = document
+                .getElementById("newSectorName")
+                .value.toUpperCase();
             if (!name) return;
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/api/sectors/${id}` : '/api/sectors';
-            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name }) });
-            if (res.ok) { alert('Sucesso!'); cancelarEdicaoSetor(); atualizarListaSetores(); }
+            const method = id ? "PUT" : "POST";
+            const url = id ? `/api/sectors/${id}` : "/api/sectors";
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ name }),
+            });
+            if (res.ok) {
+                alert("Sucesso!");
+                cancelarEdicaoSetor();
+                atualizarListaSetores();
+            }
         }
 
         function prepararEdicaoSetor(id, name) {
-            document.getElementById('sectorIdEdit').value = id;
-            document.getElementById('newSectorName').value = name;
-            document.getElementById('btnSaveSector').innerText = "💾";
-            document.getElementById('btnCancelSector').style.display = "inline-block";
+            document.getElementById("sectorIdEdit").value = id;
+            document.getElementById("newSectorName").value = name;
+            document.getElementById("btnSaveSector").innerText = "💾";
+            document.getElementById("btnCancelSector").style.display =
+                "inline-block";
         }
 
         function cancelarEdicaoSetor() {
-            document.getElementById('sectorIdEdit').value = "";
-            document.getElementById('newSectorName').value = "";
-            document.getElementById('btnSaveSector').innerText = "+";
-            document.getElementById('btnCancelSector').style.display = "none";
+            document.getElementById("sectorIdEdit").value = "";
+            document.getElementById("newSectorName").value = "";
+            document.getElementById("btnSaveSector").innerText = "+";
+            document.getElementById("btnCancelSector").style.display = "none";
         }
 
         async function excluirSetor(id) {
             if (!confirm("Tem certeza?")) return;
-            await fetch(`/api/sectors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            await fetch(`/api/sectors/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
             atualizarListaSetores();
         }
 
         async function atualizarListaCargos() {
             try {
-                const res = await fetch('/api/roles', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch("/api/roles", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 const cargos = await res.json();
-                const divLista = document.getElementById('listaCargos');
-                divLista.innerHTML = '';
+                const divLista = document.getElementById("listaCargos");
+                divLista.innerHTML = "";
                 if (Array.isArray(cargos)) {
-                    cargos.forEach(c => {
+                    cargos.forEach((c) => {
                         divLista.innerHTML += `<div class="list-item"><div style="display:flex; flex-direction:column;"><span>${c.name} <small style="color:#999;">(Nv. ${c.level})</small></span><span class="tag-badge">${c.label}</span></div><div><button class="action-btn btn-edit" onclick="prepararEdicaoCargo('${c.id}', '${c.name}', '${c.level}', '${c.label}')">✏️</button><button class="action-btn btn-del" onclick="excluirCargo('${c.id}')">🗑️</button></div></div>`;
                     });
                 }
@@ -647,20 +799,33 @@
         }
 
         async function salvarCargo() {
-            const id = document.getElementById('roleIdEdit').value;
-            const name = document.getElementById('newRoleName').value.toUpperCase().trim();
-            const level = parseInt(document.getElementById('newRoleLevel').value);
-            const label = document.getElementById('newRoleLabel').value.trim();
+            const id = document.getElementById("roleIdEdit").value;
+            const name = document
+                .getElementById("newRoleName")
+                .value.toUpperCase()
+                .trim();
+            const level = parseInt(document.getElementById("newRoleLevel").value);
+            const label = document.getElementById("newRoleLabel").value.trim();
 
-            if (!name || !label) { alert("Preencha nome e tag!"); return; }
+            if (!name || !label) {
+                alert("Preencha nome e tag!");
+                return;
+            }
 
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/api/roles/${id}` : '/api/roles';
+            const method = id ? "PUT" : "POST";
+            const url = id ? `/api/roles/${id}` : "/api/roles";
 
             try {
-                const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name, level, label }) });
+                const res = await fetch(url, {
+                    method,
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ name, level, label }),
+                });
                 if (res.ok) {
-                    alert(id ? 'Cargo atualizado!' : 'Cargo criado!');
+                    alert(id ? "Cargo atualizado!" : "Cargo criado!");
                     cancelarEdicaoCargo();
                     atualizarListaCargos();
                     carregarOpcoesDropdown();
@@ -668,81 +833,120 @@
                     const err = await res.json();
                     alert("Erro: " + (err.error || "Desconhecido"));
                 }
-            } catch (e) { alert("Erro de conexão."); }
+            } catch (e) {
+                alert("Erro de conexão.");
+            }
         }
 
         function prepararEdicaoCargo(id, name, level, label) {
-            document.getElementById('roleIdEdit').value = id;
-            document.getElementById('newRoleName').value = name;
-            document.getElementById('newRoleLevel').value = level;
-            document.getElementById('newRoleLabel').value = label;
-            document.getElementById('btnSaveRole').innerText = "Salvar";
-            document.getElementById('btnCancelRole').style.display = "inline-block";
+            document.getElementById("roleIdEdit").value = id;
+            document.getElementById("newRoleName").value = name;
+            document.getElementById("newRoleLevel").value = level;
+            document.getElementById("newRoleLabel").value = label;
+            document.getElementById("btnSaveRole").innerText = "Salvar";
+            document.getElementById("btnCancelRole").style.display = "inline-block";
         }
 
         function cancelarEdicaoCargo() {
-            document.getElementById('roleIdEdit').value = "";
-            document.getElementById('newRoleName').value = "";
-            document.getElementById('newRoleLabel').value = "";
-            document.getElementById('btnSaveRole').innerText = "Salvar";
-            document.getElementById('btnCancelRole').style.display = "none";
+            document.getElementById("roleIdEdit").value = "";
+            document.getElementById("newRoleName").value = "";
+            document.getElementById("newRoleLabel").value = "";
+            document.getElementById("btnSaveRole").innerText = "Salvar";
+            document.getElementById("btnCancelRole").style.display = "none";
         }
 
         async function excluirCargo(id) {
             if (!confirm("Tem certeza?")) return;
-            await fetch(`/api/roles/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            await fetch(`/api/roles/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
             atualizarListaCargos();
         }
 
         async function carregarOpcoesDropdown() {
             try {
-                const roleSelect = document.getElementById('role');
-                const sectorSelect = document.getElementById('sector');
-                const [rolesRes, sectorsRes] = await Promise.all([fetch('/api/roles', { headers: { 'Authorization': `Bearer ${token}` } }), fetch('/api/sectors', { headers: { 'Authorization': `Bearer ${token}` } })]);
+                const roleSelect = document.getElementById("role");
+                const sectorSelect = document.getElementById("sector");
+                const [rolesRes, sectorsRes] = await Promise.all([
+                    fetch("/api/roles", {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }),
+                    fetch("/api/sectors", {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }),
+                ]);
                 if (rolesRes.status === 401) return;
                 const roles = await rolesRes.json();
                 const sectors = await sectorsRes.json();
 
                 if (Array.isArray(roles)) {
-                    roleSelect.innerHTML = '<option value="" data-level="0">Selecione...</option>';
-                    roles.forEach(r => {
-                        if (myRole !== 'ADMIN_MASTER' && r.name === 'ADMIN_MASTER') return;
+                    roleSelect.innerHTML =
+                        '<option value="" data-level="0">Selecione...</option>';
+                    roles.forEach((r) => {
+                        if (myRole !== "ADMIN_MASTER" && r.name === "ADMIN_MASTER")
+                            return;
                         roleSelect.innerHTML += `<option value="${r.name}" data-level="${r.level}">${r.name} (${r.label})</option>`;
                     });
                 }
                 if (Array.isArray(sectors)) {
                     sectorSelect.innerHTML = '<option value="">Selecione...</option>';
-                    sectors.forEach(s => sectorSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`);
+                    sectors.forEach(
+                        (s) =>
+                            (sectorSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`),
+                    );
                 }
-            } catch (error) { console.error("Erro dropdowns:", error); }
+            } catch (error) {
+                console.error("Erro dropdowns:", error);
+            }
         }
 
         // --- PEDIDOS DE SENHA ---
         async function checarPedidosSenha() {
-            if (myRole !== 'ADMIN_MASTER' && myRole !== 'FULL') return;
-            const res = await fetch('/api/admin/password-requests', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (myRole !== "ADMIN_MASTER" && myRole !== "FULL") return;
+            const res = await fetch("/api/admin/password-requests", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             if (res.ok) {
                 const requests = await res.json();
-                const list = document.getElementById('requestsList');
-                list.innerHTML = '';
-                const pedidosFiltrados = requests.filter(req => myRole === 'ADMIN_MASTER' || req.user.sector.name === mySector);
+                const list = document.getElementById("requestsList");
+                list.innerHTML = "";
+                const pedidosFiltrados = requests.filter(
+                    (req) =>
+                        myRole === "ADMIN_MASTER" || req.user.sector.name === mySector,
+                );
                 if (pedidosFiltrados.length > 0) {
-                    document.getElementById('passwordAlerts').style.display = 'block';
-                    pedidosFiltrados.forEach(req => {
+                    document.getElementById("passwordAlerts").style.display = "block";
+                    pedidosFiltrados.forEach((req) => {
                         list.innerHTML += `<div style="background:white; padding:10px; border-radius:6px; border:1px solid #e2e3e5; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;"><div><strong>${req.user.name}</strong> (${req.user.email})<br><small>Setor: ${req.user.sector.name}</small></div><button class="btn-primary" style="width:auto; font-size:0.8rem;" onclick="resolverPedido('${req.id}', '${req.user.id}', '${req.user.name}')">Alterar Senha</button></div>`;
                     });
-                } else { document.getElementById('passwordAlerts').style.display = 'none'; }
+                } else {
+                    document.getElementById("passwordAlerts").style.display = "none";
+                }
             }
         }
 
         async function resolverPedido(requestId, userId, userName) {
             const newPass = prompt(`Digite a nova senha para ${userName}:`);
             if (!newPass) return;
-            const updateRes = await fetch(`/api/users/${userId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ password: newPass }) });
+            const updateRes = await fetch(`/api/users/${userId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ password: newPass }),
+            });
             if (updateRes.ok) {
-                await fetch(`/api/admin/password-requests/${requestId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-                alert(`Senha alterada!`); checarPedidosSenha();
-            } else { alert("Erro."); }
+                await fetch(`/api/admin/password-requests/${requestId}`, {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                alert(`Senha alterada!`);
+                checarPedidosSenha();
+            } else {
+                alert("Erro.");
+            }
         }
     </script>
 </body>

@@ -300,74 +300,75 @@ router.get("/:id/resources", async (req, res) => {
     }
 });
 
-// 7. Listar Grupos NAT (Firewall) COM CACHE
-router.get("/:id/nat", async (req, res) => {
-    const { id } = req.params;
-    const agora = Date.now();
 
-    if (
-        cacheNAT[id] &&
-        agora - cacheNAT[id].ultimaVez < TEMPO_CACHE_MINUTOS * 60 * 1000
-    ) {
-        return res.json(cacheNAT[id].dados);
+// 7. Rota Blindada de NAT
+router.get('/:id/nat', async (req, res) => {
+    const { id } = req.params;
+    const now = Date.now();
+
+    if (cacheNAT[id] && (now - cacheNAT[id].timestamp < CACHE_LIFETIME)) {
+        console.log(`[NAT] Servindo cache para projeto ${id}`);
+        return res.json(cacheNAT[id].data);
     }
 
     let client = null;
     try {
         const project = await prisma.project.findUnique({ where: { id } });
+        if (!project) return res.status(404).json({ error: "Projeto não encontrado" });
+
         client = new MikrotikClient({
             host: project.rbIp,
             user: project.rbUser,
             password: project.rbPassword,
             port: parseInt(project.rbPort) || 8728,
-            timeout: 60,
+            timeout: 45 
         });
-        client.on("error", () => { });
+
+        client.on('error', (err) => console.error("[Mikrotik Error]", err.message));
+
         await client.connect();
 
-        const natRules = await client.write("/ip/firewall/nat/print");
+        const natRules = await client.write('/ip/firewall/nat/print');
         await client.close();
 
+        // Processa os dados
         const groups = {};
         if (Array.isArray(natRules)) {
-            natRules.forEach((rule) => {
-                if (rule.comment && rule["to-addresses"]) {
+            natRules.forEach(rule => {
+                if (rule.comment && rule['to-addresses']) {
                     const groupName = rule.comment.trim();
                     if (!groups[groupName]) groups[groupName] = [];
-
                     groups[groupName].push({
-                        id: rule[".id"],
-                        ip: rule["to-addresses"],
-                        port: rule["dst-port"] || "Todas",
-                        isOnline: false,
+                        id: rule['.id'],
+                        ip: rule['to-addresses'],
+                        port: rule['dst-port'] || 'Todas',
+                        isOnline: false
                     });
                 }
             });
         }
 
-        const responseData = Object.keys(groups).map((key) => ({
-            name: key,
-            ips: groups[key],
-        }));
+        const responseData = Object.keys(groups).map(key => ({ name: key, ips: groups[key] }));
 
-        cacheNAT[id] = {
-            dados: responseData,
-            ultimaVez: agora,
-        };
+        cacheNAT[id] = { timestamp: now, data: responseData };
 
         res.json(responseData);
+
     } catch (e) {
-        if (client)
-            try {
-                client.close();
-            } catch (x) { }
+        if (client) try { client.close() } catch (x) {};
+        
+        console.error("Erro NAT:", e.message);
 
         if (cacheNAT[id]) {
-            return res.json(cacheNAT[id].dados);
+            console.log("[NAT] Erro na RB, entregando cache antigo por segurança.");
+            return res.json(cacheNAT[id].data);
         }
 
-        res.status(500).json({ error: e.message });
+        if (e.message.includes("timeout") || e.message.includes("socket")) {
+            return res.status(503).json({ error: "A RB demorou muito para responder. Tente novamente em 1 minuto." });
+        }
+
+        res.status(500).json({ error: "Erro interno: " + e.message });
     }
 });
-
 module.exports = router;
