@@ -4,36 +4,34 @@
 <head>
     <meta charset="UTF-8">
     <script>
-        // 1. Verifica se tem algum token no bolso
-        const token = localStorage.getItem('token');
-        if (!token) window.location.href = '/login.html';
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login.html';
+    fetch('/api/verify', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(r => {
+        if (!r.ok) throw new Error('Token inválido');
+        return r.json();
+    })
+    .then(user => {
+        console.log("Usuário logado:", user);
 
-        // 2. Não confia no Local Storage! Pergunta pro servidor quem é o dono do token
-        fetch('/api/verify', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-            .then(response => {
-                if (!response.ok) throw new Error('Acesso Negado');
-                return response.json();
-            })
-            .then(data => {
-                // 3. O servidor devolveu os dados. 
-                // Adapte essa linha abaixo dependendo de como você salva o cargo (role) no seu banco!
-                // Se a regra é ser 'FULL', a gente testa isso:
-                const userRole = data.role || data.roleName || localStorage.getItem('userRole'); // Pega a role real
+        const roleName = (user.role && user.role.name) ? user.role.name.toUpperCase() : '';
+        
+        const cargosPermitidos = ['FULL', 'SUPER ADMIN', 'ADMINISTRADOR', 'GERENTE'];
+        const temPermissao = cargosPermitidos.some(permitido => roleName.includes(permitido));
 
-                // ATENÇÃO: Se no seu banco o cargo de admin é "FULL", usamos isso. 
-                if (userRole !== 'FULL') {
-                    alert('Acesso negado! Seu perfil de Operador não tem permissão para acessar esta área.');
-                    window.location.href = '/dashboard.html';
-                }
-            })
-            .catch(() => {
-                // Se o cara inventar um token falso no F12, o servidor vai rejeitar e ele cai aqui:
-                localStorage.clear();
-                window.location.href = '/login.html';
-            });
-    </script>
+        if (!temPermissao) {
+            alert(`Acesso negado! Seu cargo atual (${roleName}) não tem permissão.`);
+            window.location.href = '/dashboard.html';
+        }
+    })
+    .catch(e => {
+        console.error(e);
+        localStorage.clear();
+        window.location.href = '/login.html';
+    });
+</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Usuários</title>
     <link rel="stylesheet" href="css/style.css">
