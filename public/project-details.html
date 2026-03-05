@@ -829,7 +829,7 @@
             const list = document.getElementById('modalIpList');
             list.innerHTML = '';
 
-            // Agrupa por IP para mostrar bonito no modal
+            // Agrupa por IP
             const grouped = {};
             group.ips.forEach(item => {
                 if (!grouped[item.ip]) grouped[item.ip] = { ports: [], online: item.isOnline, latency: item.latency, mac: item.mac, status: item.status };
