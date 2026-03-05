@@ -129,6 +129,7 @@ router.post('/:id/check-group', async (req, res) => {
                 }
                 results[ipClean] = { online: isOnline, ms: latency, mac: macEncontrado, status: statusMsg };
             } catch (innerError) {
+                console.log(`[ERRO PING ${ipClean}]:`, innerError.message); // Vai dedurar o erro no console do PM2
                 results[ipClean] = { online: false, ms: 0, mac: macEncontrado, status: "Erro Ping" };
             }
         }
