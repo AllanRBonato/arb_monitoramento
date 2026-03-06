@@ -1,5 +1,7 @@
 node_modules
-# Keep environment variables out of version control
+
+teste-cpn.js
+teste-fenix-status.js
 .env
 
 /generated/prisma
